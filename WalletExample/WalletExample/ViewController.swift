@@ -31,54 +31,63 @@ class ViewController: UIViewController {
     @IBOutlet private weak var balanceLabel: UILabel!
     @IBOutlet private weak var destinationAddressTextField: UITextField!
     
-    private var wallet: Wallet?  = Wallet()
+//    private var wallet: Wallet?  = Wallet()
+    
+    var peerManager: PeerManager!
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.createWalletIfNeeded()
-        self.updateLabels()
+//        let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+//        print("Docs Path: \(documentsPath)")
+//        self.createWalletIfNeeded()
+//        self.updateLabels()
     }
     
-    func createWalletIfNeeded() {
-        if wallet == nil {
-            let privateKey = PrivateKey(network: .testnet)
-            wallet = Wallet(privateKey: privateKey)
-            wallet?.save()
-        }
+    override func viewWillAppear(_ animated: Bool) {
+        peerManager = PeerManager(database: try! Database.default())
+        peerManager.start()
     }
-    
-    func updateLabels() {
-        qrCodeImageView.image = wallet?.address.qrImage()
-        addressLabel.text = wallet?.address.cashaddr
-        if let balance = wallet?.balance() {
-            balanceLabel.text = "Balance : \(balance) satoshi"
-        }
-    }
-    
-    func updateBalance() {
-        wallet?.reloadBalance(completion: { [weak self] (utxos) in
-            DispatchQueue.main.async { self?.updateLabels() }
-        })
-    }
-
-    @IBAction func didTapReloadBalanceButton(_ sender: UIButton) {
-        updateBalance()
-    }
-    
-    @IBAction func didTapSendButton(_ sender: UIButton) {
-        guard let addressString = destinationAddressTextField.text else {
-            return
-        }
-        
-        do {
-            let address: Address = try AddressFactory.create(addressString)
-            try wallet?.send(to: address, amount: 10000, completion: { [weak self] (response) in
-                print(response ?? "")
-                self?.updateBalance()
-            })
-        } catch {
-            print(error)
-        }
-    }
+//
+//    func createWalletIfNeeded() {
+//        if wallet == nil {
+//            let privateKey = PrivateKey(network: .testnet)
+//            wallet = Wallet(privateKey: privateKey)
+//            wallet?.save()
+//        }
+//    }
+//
+//    func updateLabels() {
+//        qrCodeImageView.image = wallet?.address.qrImage()
+//        addressLabel.text = wallet?.address.cashaddr
+//        if let balance = wallet?.balance() {
+//            balanceLabel.text = "Balance : \(balance) satoshi"
+//        }
+//    }
+//
+//    func updateBalance() {
+//        wallet?.reloadBalance(completion: { [weak self] (utxos) in
+//            DispatchQueue.main.async { self?.updateLabels() }
+//        })
+//    }
+//
+//    @IBAction func didTapReloadBalanceButton(_ sender: UIButton) {
+//        updateBalance()
+//    }
+//
+//    @IBAction func didTapSendButton(_ sender: UIButton) {
+//        guard let addressString = destinationAddressTextField.text else {
+//            return
+//        }
+//
+//        do {
+//            let address: Address = try AddressFactory.create(addressString)
+//            try wallet?.send(to: address, amount: 10000, completion: { [weak self] (response) in
+//                print(response ?? "")
+//                self?.updateBalance()
+//            })
+//        } catch {
+//            print(error)
+//        }
+//    }
 }
 
