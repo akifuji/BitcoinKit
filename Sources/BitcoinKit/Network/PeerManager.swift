@@ -15,13 +15,20 @@ public class PeerManager {
     var peers: [Peer] = []
     var lastBlock: Block?
     var pubkeys: [PublicKey] = []
+    var nextCheckpointIndex: Int = 0
 
     public init(database: Database, network: Network = .testnet, maxConnections: Int = 1, pubkeys: [PublicKey] = []) {
         self.database = database
         self.network = network
         self.maxConnections = maxConnections
         self.pubkeys = pubkeys
-        lastBlock = try! database.latestBlockHeader()
+        self.lastBlock = try! database.latestBlockHeader()
+        if let currentHeight = lastBlock?.height {
+            for (index, checkpoint) in network.checkpoints.enumerated() where currentHeight < checkpoint.height {
+                self.nextCheckpointIndex = index
+                break
+            }
+        }
     }
 
     public func start() {
@@ -62,7 +69,7 @@ public class PeerManager {
 
 extension PeerManager: PeerDelegate {
     func peerDidDisconnect(_ peer: Peer) {
-
+        start()
     }
 
     func peerDidHandShake(_ peer: Peer) {
@@ -71,10 +78,11 @@ extension PeerManager: PeerDelegate {
             guard remoteNodeHeight + 10 > lastBlock.height else {
                 print("node isn't synced")
                 peer.disconnect()
+                peerDidDisconnect(peer)
                 return
             }
             if lastBlock.height >= remoteNodeHeight {
-                loadBloomFilter()
+                //loadBloomFilter()
             }
         }
         // start blockchain sync
@@ -92,7 +100,7 @@ extension PeerManager: PeerDelegate {
         } else {
             // load bloom filter if we're done syncing
             print("sync done")
-            loadBloomFilter()
+            // loadBloomFilter()
         }
         for blockHeader in blockHeaders {
             if let lastBlock = lastBlock, lastBlock.blockHash != blockHeader.prevBlock {
@@ -101,6 +109,17 @@ extension PeerManager: PeerDelegate {
                 return
             }
             let blockHeight = (lastBlock?.height ?? 0) + 1
+            if nextCheckpointIndex < network.checkpoints.count {
+                let nextCheckpoint = network.checkpoints[nextCheckpointIndex]
+                if blockHeight == nextCheckpoint.height {
+                    guard blockHeader.blockHash == nextCheckpoint.hash else {
+                        print("block hash does not match the checkpoint, height: \(blockHeight), blockhash: \(Data(blockHeader.blockHash.reversed()).hex)")
+                        peer.disconnect()
+                        return
+                    }
+                    self.nextCheckpointIndex = nextCheckpointIndex + 1
+                }
+            }
             try! database.addBlockHeader(blockHeader, hash: blockHeader.blockHash, height: blockHeight)
             lastBlock = blockHeader
             lastBlock!.height = blockHeight
