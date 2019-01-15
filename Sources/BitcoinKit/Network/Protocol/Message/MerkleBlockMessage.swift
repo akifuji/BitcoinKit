@@ -81,7 +81,7 @@ struct MerkleBlockMessage: Message {
         guard flagBytes.underlyingValue == flags.count else {
             return false
         }
-        guard isValidProofOfWrok() else {
+        guard isValidProofOfWork() else {
             return false
         }
         do {
@@ -95,7 +95,7 @@ struct MerkleBlockMessage: Message {
         }
     }
 
-    private func isValidProofOfWrok() -> Bool {
+    private func isValidProofOfWork() -> Bool {
         let target: UInt256
         do {
             target = try UInt256(compact: bits)
