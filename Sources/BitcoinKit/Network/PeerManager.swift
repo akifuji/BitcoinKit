@@ -132,31 +132,32 @@ extension PeerManager: PeerDelegate {
             print("transaction is irrelevant")
             return
         }
-        try! database.addTransaction(transaction, hash: transaction.txHash)
-        let raw = Base58.decode("msLQwcLg3sdzXeVHArH3iKE3UcYgShpcUz")!
-        let pubKeyHash = raw.dropLast(4).dropFirst()
-        print("balance: \(try! database.calculateBalance(pubKeyHash: pubKeyHash))")
+        if let transactionHeight = try! database.selectTransactionBlockHeight(hash: transaction.hash) {
+            guard transactionHeight == Transaction.unconfirmed && transaction.blockHeight != Transaction.unconfirmed else {
+                print("already-known transaction")
+                return
+            }
+            try! database.updateTransactionBlockHeight(blockHeight: transaction.blockHeight, hash: transaction.hash)
+            print("transaction updated")
+        } else {
+            try! database.addTransaction(transaction)
+            print("new transaction found")
+        }
+        print("balance: \(try! database.calculateBalance(pubKeyHash: pubkeys[0].pubkeyHash))")
     }
 
     private func isMyTransaction(_ transaction: Transaction) -> Bool {
-        let raw = Base58.decode("msLQwcLg3sdzXeVHArH3iKE3UcYgShpcUz")!
-        let pubKeyHash = raw.dropLast(4).dropFirst()
-        let utxoIDs = try! database.selectUTXOIDs(pubKeyHash: pubKeyHash)
-        if transaction.txID == "e94c50c33e0a9053055870fd118e964d8f54f1795721f7b37cc3039b08c1ff0a" {
-            print(transaction.serialized().hex)
+        // check whether tx represents spending coins
+        let utxoHashes = try! database.selectUTXOHashes(pubKeyHash: pubkeys[0].pubkeyHash)
+        for transacstionInput in transaction.inputs where utxoHashes.contains(transacstionInput.previousOutput.hash) {
+            return true
         }
-        for transacstionInput in transaction.inputs {
-            if utxoIDs.contains(Data(transacstionInput.previousOutput.hash)) {
-                print("FIND!")
-                return true
-            }
-        }
-
+        // check whether tx represents getting coins
+        let pubKeyHashes = pubkeys.map { $0.pubkeyHash }
         for transactionOutput in transaction.outputs {
+            // TODO: check whether tx is P2PKH
             let pubKeyHash = Script.getPublicKeyHash(from: transactionOutput.lockingScript)
-            let address = LegacyAddress.publicKeyHashToAddress(Data([network.pubkeyhash]) + pubKeyHash)
-            //print("address: \(address)")
-            if address == "msLQwcLg3sdzXeVHArH3iKE3UcYgShpcUz" {
+            if pubKeyHashes.contains(pubKeyHash) {
                 return true
             }
         }

@@ -9,6 +9,7 @@
 import Foundation
 
 public struct Transaction: Message {
+    static let unconfirmed = UINT32_MAX
     static var command: String {
         return "tx"
     }
@@ -23,12 +24,13 @@ public struct Transaction: Message {
     }
     public let outputs: [TransactionOutput]
     public let lockTime: UInt32
-    public var txHash: Data {
+    public var hash: Data {
         return Crypto.sha256sha256(serialized())
     }
-    public var txID: String {
-        return Data(txHash.reversed()).hex
+    public var txID: Data {
+        return Data(hash.reversed())
     }
+    var blockHeight: UInt32 = unconfirmed
 
     public func serialized() -> Data {
         var data = Data()
@@ -59,6 +61,6 @@ public struct Transaction: Message {
             outputs.append(TransactionOutput.deserialize(byteStream))
         }
         let lockTime = byteStream.read(UInt32.self)
-        return Transaction(version: version, inputs: inputs, outputs: outputs, lockTime: lockTime)
+        return Transaction(version: version, inputs: inputs, outputs: outputs, lockTime: lockTime, blockHeight: unconfirmed)
     }
 }

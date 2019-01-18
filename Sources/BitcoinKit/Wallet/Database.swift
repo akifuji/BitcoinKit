@@ -46,7 +46,8 @@ public class Database {
                                         flag INTEGER NOT NULL,
                                         tx_in_count INTEGER NOT NULL,
                                         tx_out_count INTEGER NOT NULL,
-                                        lock_time INTEGER NOT NULL
+                                        lock_time INTEGER NOT NULL,
+                                        block_height INTEGER NOT NULL
                                     );
                                     CREATE TABLE IF NOT EXISTS txin (
                                         script_length INTEGER NOT NULL,
@@ -96,9 +97,9 @@ public class Database {
             try execute { sqlite3_prepare_v2(database,
                                              """
                                              REPLACE INTO tx
-                                                (id, version, flag, tx_in_count, tx_out_count, lock_time)
+                                                (id, version, flag, tx_in_count, tx_out_count, lock_time, block_height)
                                                 VALUES
-                                                (?,     ?,     ?,        ?,            ?,          ?);
+                                                (?,     ?,     ?,        ?,            ?,          ?,          ?);
                                              """,
                                              -1,
                                              &statement,
@@ -106,6 +107,30 @@ public class Database {
             }
             return statement
         }()
+        statements["selectTransactionBlockHeight"] = try {
+            var statement: OpaquePointer?
+            try execute { sqlite3_prepare_v2(database,
+                                             """
+                                             SELECT block_height FROM tx WHERE id == ?;
+                                             """,
+                                             -1,
+                                             &statement,
+                                             nil)
+            }
+            return statement
+            }()
+        statements["updateTransactionBlockHeight"] = try {
+            var statement: OpaquePointer?
+            try execute { sqlite3_prepare_v2(database,
+                                             """
+                                             UPDATE tx SET block_height = ? WHERE id == ?;
+                                             """,
+                                             -1,
+                                             &statement,
+                                             nil)
+            }
+            return statement
+            }()
         statements["addTransactionInput"] = try {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
@@ -209,45 +234,66 @@ public class Database {
         try execute { sqlite3_reset(statement) }
     }
 
-    public func addTransaction(_ transaction: Transaction, hash: Data) throws {
+    public func addTransaction(_ transaction: Transaction) throws {
         let statement = statements["addTransaction"]
+        let hash = transaction.hash
         try execute { hash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(hash.count), SQLITE_TRANSIENT) } }
         try execute { sqlite3_bind_int64(statement, 2, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: transaction.version))) }
         try execute { sqlite3_bind_int(statement, 3, 0) } // Not supported 'flag' currently
         try execute { sqlite3_bind_int64(statement, 4, sqlite3_int64(bitPattern: transaction.txInCount.underlyingValue)) }
         try execute { sqlite3_bind_int64(statement, 5, sqlite3_int64(bitPattern: transaction.txOutCount.underlyingValue)) }
         try execute { sqlite3_bind_int64(statement, 6, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: transaction.lockTime))) }
+        try execute { sqlite3_bind_int64(statement, 7, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: transaction.blockHeight))) }
 
         try executeUpdate { sqlite3_step(statement) }
         try execute { sqlite3_reset(statement) }
 
         for input in transaction.inputs {
-            try addTransactionInput(input, txId: hash)
+            try addTransactionInput(input, hash: hash)
         }
         for (i, output) in transaction.outputs.enumerated() {
-            try addTransactionOutput(index: i, output: output, txId: hash)
+            try addTransactionOutput(index: i, output: output, hash: hash)
         }
     }
 
-    public func addTransactionInput(_ input: TransactionInput, txId: Data) throws {
+    func selectTransactionBlockHeight(hash: Data) throws -> UInt32? {
+        let statement = statements["selectTransactionBlockHeight"]
+        try execute { hash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(hash.count), SQLITE_TRANSIENT) } }
+        var blockHeight: UInt32?
+        while sqlite3_step(statement) == SQLITE_ROW {
+            blockHeight = UInt32(sqlite3_column_int64(statement, 7))
+        }
+        try execute { sqlite3_reset(statement) }
+        return blockHeight
+    }
+
+    func updateTransactionBlockHeight(blockHeight: UInt32, hash: Data) throws {
+        let statement = statements["updateTransactionBlockHeight"]
+        try execute { sqlite3_bind_int64(statement, 1, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: blockHeight))) }
+        try execute { hash.withUnsafeBytes { sqlite3_bind_blob(statement, 2, $0, Int32(hash.count), SQLITE_TRANSIENT) } }
+        try executeUpdate { sqlite3_step(statement) }
+        try execute { sqlite3_reset(statement) }
+    }
+
+    public func addTransactionInput(_ input: TransactionInput, hash: Data) throws {
         let statement = statements["addTransactionInput"]
         try execute { sqlite3_bind_int64(statement, 1, sqlite3_int64(bitPattern: input.scriptLength.underlyingValue)) }
         try execute { input.signatureScript.withUnsafeBytes { sqlite3_bind_blob(statement, 2, $0, Int32(input.signatureScript.count), SQLITE_TRANSIENT) } }
         try execute { sqlite3_bind_int64(statement, 3, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: input.sequence))) }
-        try execute { txId.withUnsafeBytes { sqlite3_bind_blob(statement, 4, $0, Int32(txId.count), SQLITE_TRANSIENT) } }
+        try execute { hash.withUnsafeBytes { sqlite3_bind_blob(statement, 4, $0, Int32(hash.count), SQLITE_TRANSIENT) } }
         try execute { input.previousOutput.hash.withUnsafeBytes { sqlite3_bind_blob(statement, 5, $0, Int32(input.previousOutput.hash.count), SQLITE_TRANSIENT) } }
 
         try executeUpdate { sqlite3_step(statement) }
         try execute { sqlite3_reset(statement) }
     }
 
-    public func addTransactionOutput(index: Int, output: TransactionOutput, txId: Data) throws {
+    public func addTransactionOutput(index: Int, output: TransactionOutput, hash: Data) throws {
         let statement = statements["addTransactionOutput"]
         try execute { sqlite3_bind_int64(statement, 1, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: index))) }
         try execute { sqlite3_bind_int64(statement, 2, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: output.value))) }
         try execute { sqlite3_bind_int64(statement, 3, sqlite3_int64(bitPattern: output.scriptLength.underlyingValue)) }
         try execute { output.lockingScript.withUnsafeBytes { sqlite3_bind_blob(statement, 4, $0, Int32(output.lockingScript.count), SQLITE_TRANSIENT) } }
-        try execute { txId.withUnsafeBytes { sqlite3_bind_blob(statement, 5, $0, Int32(txId.count), SQLITE_TRANSIENT) } }
+        try execute { hash.withUnsafeBytes { sqlite3_bind_blob(statement, 5, $0, Int32(hash.count), SQLITE_TRANSIENT) } }
         let pubKeyHash = Script.getPublicKeyHash(from: output.lockingScript)
         try execute { pubKeyHash.withUnsafeBytes { sqlite3_bind_blob(statement, 6, $0, Int32(pubKeyHash.count), SQLITE_TRANSIENT) } }
 
@@ -268,15 +314,15 @@ public class Database {
         return balance
     }
 
-    public func selectUTXOIDs(pubKeyHash: Data) throws -> [Data] {
+    public func selectUTXOHashes(pubKeyHash: Data) throws -> [Data] {
         let statement = statements["selectUTXO"]
         try execute { pubKeyHash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(pubKeyHash.count), SQLITE_TRANSIENT) } }
-        var txIDs = [Data]()
+        var hashes = [Data]()
         while sqlite3_step(statement) == SQLITE_ROW {
-            txIDs.append(Data(bytes: sqlite3_column_blob(statement, 0)!, count: 32))
+            hashes.append(Data(bytes: sqlite3_column_blob(statement, 0)!, count: 32))
         }
         try execute { sqlite3_reset(statement) }
-        return txIDs
+        return hashes
     }
 
     func latestBlockHeader() throws -> Block? {
