@@ -129,17 +129,11 @@ struct MerkleBlockMessage: Message {
         }
         var boolFlagIterator = boolFlag.makeIterator()
         let root = try buildPartialMerkleTree(hashIterator: &hashIterator, boolFlagIterator: &boolFlagIterator, depth: 0, maxDepth: maxDepth)
-        guard let hash = root.hash else {
-            throw ProtocolError.error("Merkle root is nil")
-        }
-        return hash
+        return root.hash
     }
 
     private struct PartialMerkleTree {
-        var hash: Data?
-        // zero size if depth is maxDepth
-        // leaf[0]: left, leaf[1]: right
-        var leaf: [PartialMerkleTree] = []
+        var hash: Data
         init(hash: Data) {
             self.hash = hash
         }
@@ -156,11 +150,13 @@ struct MerkleBlockMessage: Message {
             return PartialMerkleTree(hash: hash)
         } else {
             let left = try buildPartialMerkleTree(hashIterator: &hashIterator, boolFlagIterator: &boolFlagIterator, depth: depth + 1, maxDepth: maxDepth)
-            let right = (try? buildPartialMerkleTree(hashIterator: &hashIterator, boolFlagIterator: &boolFlagIterator, depth: depth + 1, maxDepth: maxDepth)) ?? left
-            guard let leftHash = left.hash, let rightHash = right.hash else {
-                throw ProtocolError.error("child node hashes should not be nil")
+            let right = (try? buildPartialMerkleTree(hashIterator: &hashIterator, boolFlagIterator: &boolFlagIterator, depth: depth + 1, maxDepth: maxDepth)) ?? left // if right branch is missing, duplicate left branch
+            if left.hash == right.hash {
+                guard hashIterator.next() == nil && boolFlagIterator.next() == nil else {
+                    throw ProtocolError.error("should not iterate any more") // defend against (CVE-2012-2459)
+                }
             }
-            let hash = Crypto.sha256sha256(leftHash + rightHash)
+            let hash = Crypto.sha256sha256(left.hash + right.hash)
             return PartialMerkleTree(hash: hash)
         }
     }
