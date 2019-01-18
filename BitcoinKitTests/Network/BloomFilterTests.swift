@@ -1,5 +1,5 @@
 //
-//  BloomFilter.swift
+//  BloomFilterTests.swift
 //  BitcoinKitTests
 //
 //  Created by Akifumi Fujita on 2019/01/18.
