@@ -12,6 +12,7 @@
 		0C4FDFCD21EAF18600BC27B9 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C4FDFCC21EAF18600BC27B9 /* Message.swift */; };
 		0C4FDFD121ED845E00BC27B9 /* UInt256.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C4FDFD021ED845E00BC27B9 /* UInt256.swift */; };
 		0C4FDFD321ED9D6800BC27B9 /* UInt256Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C4FDFD221ED9D6800BC27B9 /* UInt256Tests.swift */; };
+		0C4FDFD521F1771700BC27B9 /* MerkleBlockMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C4FDFD421F1771700BC27B9 /* MerkleBlockMessageTests.swift */; };
 		0CC467B121DD847B007828F3 /* PrivateKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC467B021DD847B007828F3 /* PrivateKey.swift */; };
 		0CC467B321DD887F007828F3 /* Network.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC467B221DD887F007828F3 /* Network.swift */; };
 		0CC467B621DDC34F007828F3 /* Base58.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC467B521DDC34F007828F3 /* Base58.swift */; };
@@ -73,6 +74,7 @@
 		0C4FDFCC21EAF18600BC27B9 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		0C4FDFD021ED845E00BC27B9 /* UInt256.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UInt256.swift; sourceTree = "<group>"; };
 		0C4FDFD221ED9D6800BC27B9 /* UInt256Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UInt256Tests.swift; sourceTree = "<group>"; };
+		0C4FDFD421F1771700BC27B9 /* MerkleBlockMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MerkleBlockMessageTests.swift; sourceTree = "<group>"; };
 		0CC467B021DD847B007828F3 /* PrivateKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateKey.swift; sourceTree = "<group>"; };
 		0CC467B221DD887F007828F3 /* Network.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Network.swift; sourceTree = "<group>"; };
 		0CC467B521DDC34F007828F3 /* Base58.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Base58.swift; sourceTree = "<group>"; };
@@ -248,6 +250,7 @@
 		0CC4680221E1EF38007828F3 /* Network */ = {
 			isa = PBXGroup;
 			children = (
+				0C4FDFD421F1771700BC27B9 /* MerkleBlockMessageTests.swift */,
 			);
 			path = Network;
 			sourceTree = "<group>";
@@ -469,6 +472,7 @@
 				0CC4680C21E1EF89007828F3 /* KeyTests.swift in Sources */,
 				0CC467F321E1CD74007828F3 /* BitcoinKitTests.swift in Sources */,
 				0CC4680A21E1EF81007828F3 /* PrivateKeyTests.swift in Sources */,
+				0C4FDFD521F1771700BC27B9 /* MerkleBlockMessageTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
