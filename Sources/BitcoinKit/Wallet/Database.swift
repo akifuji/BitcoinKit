@@ -261,7 +261,7 @@ public class Database {
         try execute { hash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(hash.count), SQLITE_TRANSIENT) } }
         var blockHeight: UInt32?
         while sqlite3_step(statement) == SQLITE_ROW {
-            blockHeight = UInt32(sqlite3_column_int64(statement, 7))
+            blockHeight = UInt32(sqlite3_column_int64(statement, 0))
         }
         try execute { sqlite3_reset(statement) }
         return blockHeight
