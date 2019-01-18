@@ -20,6 +20,12 @@ public struct PublicKey {
     public var pubkeyHash: Data {
         return Crypto.sha256ripemd160(data)
     }
+    public var base58Address: String {
+        let versionByte: Data = Data([network.pubkeyhash])
+        let payload = versionByte + pubkeyHash
+        let checksum = Crypto.sha256sha256(payload).prefix(4)
+        return Base58.encode(payload + checksum)
+    }
 
     public init(data: Data, network: Network) {
         self.data = data
