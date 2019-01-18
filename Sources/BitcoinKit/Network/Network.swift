@@ -153,10 +153,10 @@ public class Testnet: Network {
             Checkpoint(height: 806_400, hash: Data(Data(hex: "0000000000000faf114ff29df6dbac969c6b4a3b407cd790d3a12742b50c2398")!.reversed()), timestamp: 1_462_006_183, target: 0x1a34e280),
             Checkpoint(height: 907_200, hash: Data(Data(hex: "0000000000166938e6f172a21fe69fe335e33565539e74bf74eeb00d2022c226")!.reversed()), timestamp: 1_469_705_562, target: 0x1c00ffff),
             Checkpoint(height: 1_008_000, hash: Data(Data(hex: "000000000000390aca616746a9456a0d64c1bd73661fd60a51b5bf1c92bae5a0")!.reversed()), timestamp: 1_476_926_743, target: 0x1a52ccc0),
-            Checkpoint(height: 1_108_800, hash: Data(Data(hex: "00000000000288d9a219419d0607fb67cc324d4b6d2945ca81eaa5e739fab81e")!.reversed()), timestamp: 1_490_751_239, target: 0x1b09ecf0),
             Checkpoint(height: 1_209_600, hash: Data(Data(hex: "0000000000000026b4692a26f1651bec8e9d4905640bd8e56056c9a9c53badf8")!.reversed()), timestamp: 1_507_328_506, target: 0x1973e180),
             Checkpoint(height: 1_310_400, hash: Data(Data(hex: "0000000000013b434bbe5668293c92ef26df6d6d4843228e8958f6a3d8101709")!.reversed()), timestamp: 1_527_038_604, target: 0x1b0ffff0),
-            Checkpoint(height: 1_411_200, hash: Data(Data(hex: "00000000000000008b3baea0c3de24b9333c169e1543874f4202397f5b8502cb")!.reversed()), timestamp: 1_535_535_770, target: 0x194ac105)
+            Checkpoint(height: 1_411_200, hash: Data(Data(hex: "00000000000000008b3baea0c3de24b9333c169e1543874f4202397f5b8502cb")!.reversed()), timestamp: 1_535_535_770, target: 0x194ac105),
+            Checkpoint(height: 1_414_411, hash: Data(Data(hex: "00000000c56f3315d181723908e27559554d4ab6d6e861a744cc142455cd5ad5")!.reversed()), timestamp: 1_537_674_568, target: 0x1d00ffff) // CVE-2018-17144
             // 1512000
         ]
     }
