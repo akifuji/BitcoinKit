@@ -74,8 +74,8 @@ class Peer: NSObject {
             if let error = error {
                 strongSelf.log(error.debugDescription)
             }
-            guard let data = data, let messageHeader = MessageHeader.deserialize(data) else {
-                strongSelf.log("failed to deserialize messageHeader")
+            guard let _data = data, let messageHeader = MessageHeader.deserialize(_data) else {
+                strongSelf.log("failed to deserialize messageHeader: \(String(describing: data?.hex))")
                 return
             }
             let command: String = messageHeader.command
