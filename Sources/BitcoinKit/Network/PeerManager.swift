@@ -82,7 +82,8 @@ extension PeerManager: PeerDelegate {
                 return
             }
             if lastBlock.height >= remoteNodeHeight {
-                //loadBloomFilter()
+                loadBloomFilter()
+                return
             }
         }
         // start blockchain sync
@@ -100,7 +101,7 @@ extension PeerManager: PeerDelegate {
         } else {
             // load bloom filter if we're done syncing
             print("sync done")
-            // loadBloomFilter()
+            loadBloomFilter()
         }
         for blockHeader in blockHeaders {
             if let lastBlock = lastBlock, lastBlock.blockHash != blockHeader.prevBlock {
@@ -126,18 +127,18 @@ extension PeerManager: PeerDelegate {
         }
     }
 
-    func peer(didReceiveTransaction transaction: Transaction, hash: Data) {
-        guard isRelevant(transaction) else {
+    func peer(didReceiveTransaction transaction: Transaction) {
+        guard isMyTransaction(transaction) else {
             print("transaction is irrelevant")
             return
         }
-        try! database.addTransaction(transaction, hash: hash)
+        try! database.addTransaction(transaction, hash: transaction.txHash)
         let raw = Base58.decode("msLQwcLg3sdzXeVHArH3iKE3UcYgShpcUz")!
         let pubKeyHash = raw.dropLast(4).dropFirst()
         print("balance: \(try! database.calculateBalance(pubKeyHash: pubKeyHash))")
     }
 
-    private func isRelevant(_ transaction: Transaction) -> Bool {
+    private func isMyTransaction(_ transaction: Transaction) -> Bool {
         let raw = Base58.decode("msLQwcLg3sdzXeVHArH3iKE3UcYgShpcUz")!
         let pubKeyHash = raw.dropLast(4).dropFirst()
         let utxoIDs = try! database.selectUTXOIDs(pubKeyHash: pubKeyHash)

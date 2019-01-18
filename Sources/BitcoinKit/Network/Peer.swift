@@ -13,17 +13,10 @@ private let protocolVersion: Int32 = 70_015
 private let minimumProtocolVersion: Int32 = 70_011 // peers earlier than this protocol version does not support bloom filter
 
 protocol PeerDelegate: class {
-    func peerDidDisconnect(_ peer: Peer)
-    func peer(_ peer: Peer, didReceiveBlockHeaders blockHeaders: [Block])
-    func peer(didReceiveTransaction message: Transaction, hash: Data)
     func peerDidHandShake(_ peer: Peer)
-}
-
-extension PeerDelegate {
-    func peerDidDisconnect(_ peer: Peer) {}
-    func peer(_ peer: Peer, didReceiveBlockHeaders blockHeaders: [Block]) {}
-    func peer(didReceiveTransaction message: Transaction, hash: Data) {}
-    func peerDidHandShake(_ peer: Peer) {}
+    func peer(_ peer: Peer, didReceiveBlockHeaders blockHeaders: [Block])
+    func peer(didReceiveTransaction message: Transaction)
+    func peerDidDisconnect(_ peer: Peer)
 }
 
 class Peer: NSObject {
@@ -37,6 +30,7 @@ class Peer: NSObject {
         var gotVerack = false
         var sentVersion = false
         var sentVerack = false
+        var sentFilter = false
         var remoteNodeHeight: Int32 = -1
     }
     public weak var delegate: PeerDelegate?
@@ -169,6 +163,7 @@ class Peer: NSObject {
             if let sendError = sendError {
                 strongSelf.log("SendError: \(sendError.debugDescription)")
             }
+            strongSelf.log("send \(type(of: message).command) message")
         })
     }
 
@@ -183,7 +178,6 @@ class Peer: NSObject {
                                      startHeight: 0,
                                      relay: false)
         sendMessage(versionMessage)
-        log("send versionMessage")
     }
 
     private func sendVerackMessage() {
@@ -200,6 +194,7 @@ class Peer: NSObject {
     func sendFilterLoadMessage(_ bloomFilter: BloomFilter) {
         let filterLoadMessage = FilterLoadMessage(filter: Data(bloomFilter.filters), hashFuncs: bloomFilter.hashFuncs, tweak: bloomFilter.tweak, flags: 0)
         sendMessage(filterLoadMessage)
+        context.sentFilter = true
     }
 
     func sendGetDataMessage(_ inventoryItems: [InventoryItem]) {
@@ -250,13 +245,21 @@ class Peer: NSObject {
     }
 
     private func handleTransactionMessage(payload: Data) {
-        log("got tx")
         let tx = Transaction.deserialize(payload)
-        delegate?.peer(didReceiveTransaction: tx, hash: tx.txHash)
+        guard context.sentFilter else {
+            log("got tx message before loading filter")
+            return
+        }
+        log("got tx")
+        delegate?.peer(didReceiveTransaction: tx)
     }
 
     private func handleInventoryMessage(payload: Data) {
         let inventory = InventoryMessage.deserialize(payload)
+        guard context.sentFilter else {
+            log("got inv message before loading a filter")
+            return
+        }
         log("got inv with \(inventory.count.underlyingValue) item(s)")
         for item in inventory.inventoryItems {
             let type = InventoryItem.ObjectType(rawValue: item.type) ?? .unknown
@@ -264,6 +267,9 @@ class Peer: NSObject {
             switch type {
             case .blockMessage:
                 let sendItem = InventoryItem(type: InventoryItem.ObjectType.filteredBlockMessage.rawValue, hash: item.hash)
+                sendGetDataMessage([sendItem])
+            case .transactionMessage:
+                let sendItem = InventoryItem(type: InventoryItem.ObjectType.transactionMessage.rawValue, hash: item.hash)
                 sendGetDataMessage([sendItem])
             default:
                 break
