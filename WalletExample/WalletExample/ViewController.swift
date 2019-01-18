@@ -44,9 +44,32 @@ class ViewController: UIViewController {
     }
     
     override func viewWillAppear(_ animated: Bool) {
-        peerManager = PeerManager(database: try! Database.default())
+        let privkey = try! PrivateKey.init(wif: "cQ2BQqKL44d9az7JuUx8b1CSGx5LkQrTM7UQKjYGnrHiMX5nUn5C")
+        let pubkey = privkey.publicKey
+        qrCodeImageView.image = generateVisualCode(address: pubkey.base58Address)
+        peerManager = PeerManager(database: try! Database.default(), pubkeys: [pubkey])
         peerManager.start()
     }
+    
+    private func generateVisualCode(address: String) -> UIImage? {
+        let parameters: [String : Any] = [
+            "inputMessage": address.data(using: .utf8)!,
+            "inputCorrectionLevel": "L"
+        ]
+        let filter = CIFilter(name: "CIQRCodeGenerator", parameters: parameters)
+        
+        guard let outputImage = filter?.outputImage else {
+            return nil
+        }
+        
+        let scaledImage = outputImage.transformed(by: CGAffineTransform(scaleX: 6, y: 6))
+        guard let cgImage = CIContext().createCGImage(scaledImage, from: scaledImage.extent) else {
+            return nil
+        }
+        
+        return UIImage(cgImage: cgImage)
+    }
+    
 //
 //    func createWalletIfNeeded() {
 //        if wallet == nil {
