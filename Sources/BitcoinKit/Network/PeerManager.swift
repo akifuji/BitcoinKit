@@ -105,7 +105,7 @@ extension PeerManager: PeerDelegate {
         }
         for blockHeader in blockHeaders {
             if let lastBlock = lastBlock, lastBlock.blockHash != blockHeader.prevBlock {
-                print("block hash does not match the prev block.")
+                print("last block hash does not match the prev block.")
                 peer.disconnect()
                 return
             }
@@ -127,6 +127,16 @@ extension PeerManager: PeerDelegate {
         }
     }
 
+    func peer(_ peer: Peer, didReceiveMerkleBkock merkleBlock: MerkleBlockMessage) {
+        // assume that last block is the second newest one
+        guard let lastBlock = lastBlock, lastBlock.blockHash == merkleBlock.prevBlock else {
+            peer.log("last block hash does not match the prev block of merkle block")
+            peer.disconnect()
+            return
+        }
+        peer.context.currentMerkleBlock = merkleBlock
+    }
+
     func peer(didReceiveTransaction transaction: Transaction) {
         guard isMyTransaction(transaction) else {
             print("transaction is irrelevant")
@@ -134,7 +144,7 @@ extension PeerManager: PeerDelegate {
         }
         if let transactionHeight = try! database.selectTransactionBlockHeight(hash: transaction.hash) {
             guard transactionHeight == Transaction.unconfirmed && transaction.blockHeight != Transaction.unconfirmed else {
-                print("already-known transaction")
+                print("already-known transaction. No need to update")
                 return
             }
             try! database.updateTransactionBlockHeight(blockHeight: transaction.blockHeight, hash: transaction.hash)

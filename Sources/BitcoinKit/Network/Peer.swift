@@ -15,6 +15,7 @@ private let minimumProtocolVersion: Int32 = 70_011 // peers earlier than this pr
 protocol PeerDelegate: class {
     func peerDidHandShake(_ peer: Peer)
     func peer(_ peer: Peer, didReceiveBlockHeaders blockHeaders: [Block])
+    func peer(_ peer: Peer, didReceiveMerkleBkock merkleBlock: MerkleBlockMessage)
     func peer(didReceiveTransaction message: Transaction)
     func peerDidDisconnect(_ peer: Peer)
 }
@@ -31,6 +32,8 @@ class Peer: NSObject {
         var sentVersion = false
         var sentVerack = false
         var sentFilter = false
+        var currentMerkleBlock: MerkleBlockMessage?
+        var currentGotTxNumber: UInt32 = 0  // the number of gotten tx following a merkle block
         var remoteNodeHeight: Int32 = -1
     }
     public weak var delegate: PeerDelegate?
@@ -114,6 +117,12 @@ class Peer: NSObject {
     }
 
     private func isSucceeededHandle(command: String, payload: Data) -> Bool {
+        // if we receive a non-tx message, merkleblock is done
+        if command != Transaction.command, let merkleBlock = context.currentMerkleBlock {
+            log("incomplete merkleblock, expected \(merkleBlock.totalTransactions) txs, but got only \(context.currentGotTxNumber)")
+            context.currentMerkleBlock = nil
+            context.currentGotTxNumber = 0
+        }
         do {
             switch command {
             case VersionMessage.command:
@@ -234,14 +243,18 @@ class Peer: NSObject {
     }
 
     private func handleMerkleblockMessage(payload: Data) {
-        log("got merkleblock")
         let merkleBlockMessage = MerkleBlockMessage.deserialize(payload)
         guard merkleBlockMessage.isValid() else {
             print(payload.hex)
             log("malformed merkleblock message")
             return
         }
-        print("yatta")
+        guard context.sentFilter else {
+            log("got merkleblock message before loading filter")
+            return
+        }
+        log("got merkleblock")
+        delegate?.peer(self, didReceiveMerkleBkock: merkleBlockMessage)
     }
 
     private func handleTransactionMessage(payload: Data) {
@@ -251,6 +264,18 @@ class Peer: NSObject {
             return
         }
         log("got tx")
+        if let merkleBlock = context.currentMerkleBlock {
+            guard merkleBlock.hashes.contains(tx.hash) else {
+                log("tx hash is out of merkle block hashes")
+                return
+            }
+            context.currentGotTxNumber += 1
+            if context.currentGotTxNumber == merkleBlock.totalTransactions {
+                log("txs following a merkle block has completed")
+                context.currentMerkleBlock = nil
+                context.currentGotTxNumber = 0
+            }
+        }
         delegate?.peer(didReceiveTransaction: tx)
     }
 
@@ -281,7 +306,7 @@ class Peer: NSObject {
         case error(String)
     }
 
-    private func log(_ message: String) {
+    func log(_ message: String) {
         print("\(message)")
     }
 }
