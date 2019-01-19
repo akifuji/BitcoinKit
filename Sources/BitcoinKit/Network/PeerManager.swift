@@ -8,6 +8,11 @@
 
 import Foundation
 
+public protocol PeerManagerDelegate: class {
+    func balanceChanged(_ balance: UInt64)
+    func paymentAdded(_ payment: Payment)
+}
+
 public class PeerManager {
     let database: Database
     let network: Network
@@ -16,6 +21,8 @@ public class PeerManager {
     var lastBlock: Block?
     var pubkeys: [PublicKey] = []
     var nextCheckpointIndex: Int = 0
+
+    public weak var delegate: PeerManagerDelegate?
 
     public init(database: Database, network: Network = .testnet, maxConnections: Int = 1, pubkeys: [PublicKey] = []) {
         self.database = database
@@ -138,7 +145,7 @@ extension PeerManager: PeerDelegate {
     }
 
     func peer(didReceiveTransaction transaction: Transaction) {
-        guard isMyTransaction(transaction) else {
+        guard let payment = convertToMyPayment(transaction) else {
             print("transaction is irrelevant")
             return
         }
@@ -151,26 +158,37 @@ extension PeerManager: PeerDelegate {
             print("transaction updated")
         } else {
             try! database.addTransaction(transaction)
+            try! database.addPayment(payment)
             print("new transaction found")
         }
-        print("balance: \(try! database.calculateBalance(pubKeyHash: pubkeys[0].pubkeyHash))")
+        delegate?.paymentAdded(payment)
+        let balance = try! database.calculateBalance(pubKeyHash: pubkeys[0].pubkeyHash)
+        print("balance: \(balance)")
+        delegate?.balanceChanged(balance)
     }
 
-    private func isMyTransaction(_ transaction: Transaction) -> Bool {
-        // check whether tx represents spending coins
-        let utxoHashes = try! database.selectUTXOHashes(pubKeyHash: pubkeys[0].pubkeyHash)
-        for transacstionInput in transaction.inputs where utxoHashes.contains(transacstionInput.previousOutput.hash) {
-            return true
+    private func convertToMyPayment(_ transaction: Transaction) -> Payment? {
+        // sum sendAmount if tx input points to UTXO
+        var sendAmount: UInt64 = 0
+        let utxos = try! database.selectUTXO(pubKeyHash: pubkeys[0].pubkeyHash)
+        for transacstionInput in transaction.inputs {
+            sendAmount = utxos
+                .filter { $0.pubKeyHash == pubkeys[0].pubkeyHash }
+                .filter { $0.hash == transacstionInput.previousOutput.hash }
+                .reduce(0) { $0 + $1.value }
         }
-        // check whether tx represents getting coins
+        // sum receiveAmount if tx output contains my pubkey hash
         let pubKeyHashes = pubkeys.map { $0.pubkeyHash }
-        for transactionOutput in transaction.outputs {
-            // TODO: check whether tx is P2PKH
-            let pubKeyHash = Script.getPublicKeyHash(from: transactionOutput.lockingScript)
-            if pubKeyHashes.contains(pubKeyHash) {
-                return true
-            }
+        let receiveAmount: UInt64 = transaction.outputs
+            .filter { _ in true } // TODO: check whether tx is P2PKH
+            .filter { pubKeyHashes.contains(Script.getPublicKeyHash(from: $0.lockingScript)) }
+            .reduce(0) { $0 + $1.value }
+        // return nil if tx is irrelevant
+        guard sendAmount > 0 || receiveAmount > 0 else {
+            return nil
         }
-        return false
+        let amount: UInt64 = receiveAmount - sendAmount
+        let direction: Payment.Direction = amount > 0 ? .received : .sent
+        return Payment(txID: transaction.txID, direction: direction, amount: amount)
     }
 }

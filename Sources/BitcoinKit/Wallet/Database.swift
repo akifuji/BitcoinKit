@@ -66,6 +66,12 @@ public class Database {
                                         pub_key_hash BLOB,
                                         FOREIGN KEY(tx_id) REFERENCES tx(id)
                                     );
+                                    CREATE TABLE IF NOT EXISTS payment (
+                                        id BLOB NOT NULL PRIMARY KEY,
+                                        direction BLOB NOT NULL,
+                                        amount INTEGER NOT NULL,
+                                        block_height INTEGER NOT NULL
+                                    );
                                     CREATE VIEW IF NOT EXISTS view_utxo AS
                                         SELECT tx.id, txout.pub_key_hash, txout.out_index, txout.value, txin.txout_id from tx
                                         LEFT JOIN txout on id = txout.tx_id
@@ -76,7 +82,6 @@ public class Database {
                                    nil,
                                    nil)
         }
-
         statements["addBlockHeader"] = try {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
@@ -107,6 +112,33 @@ public class Database {
             }
             return statement
         }()
+        statements["addPayment"] = try {
+            var statement: OpaquePointer?
+            try execute { sqlite3_prepare_v2(database,
+                                             """
+                                             REPLACE INTO payment
+                                                (id, direction, amount, block_height)
+                                                VALUES
+                                                (?,      ?,       ?,         ?);
+                                             """,
+                                             -1,
+                                             &statement,
+                                             nil)
+            }
+            return statement
+        }()
+        statements["payments"] = try {
+            var statement: OpaquePointer?
+            try execute { sqlite3_prepare_v2(database,
+                                             """
+                                             SELECT * FROM payment;
+                                             """,
+                                             -1,
+                                             &statement,
+                                             nil)
+            }
+            return statement
+            }()
         statements["selectTransactionBlockHeight"] = try {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
@@ -189,7 +221,7 @@ public class Database {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
                                              """
-                                             SELECT id FROM view_utxo WHERE pub_key_hash == ?;
+                                             SELECT * FROM view_utxo WHERE pub_key_hash == ?;
                                              """,
                                              -1,
                                              &statement,
@@ -256,6 +288,34 @@ public class Database {
         }
     }
 
+    func addPayment(_ payment: Payment) throws {
+        let statement = statements["addPayment"]
+        let txID = payment.txID
+        try execute { txID.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(txID.count), SQLITE_TRANSIENT) } }
+        try execute { sqlite3_bind_int(statement, 2, payment.direction.rawValue) }
+        try execute { sqlite3_bind_int64(statement, 3, sqlite3_int64(payment.amount)) }
+        try execute { sqlite3_bind_int64(statement, 4, sqlite3_int64(payment.blockHeight)) }
+
+        try executeUpdate { sqlite3_step(statement) }
+        try execute { sqlite3_reset(statement) }
+    }
+
+    public func payments() throws -> [Payment] {
+        let statement = statements["payments"]
+        var payments = [Payment]()
+        while sqlite3_step(statement) == SQLITE_ROW {
+            let txID = Data(bytes: sqlite3_column_blob(statement, 0)!, count: 32)
+            guard let direction = Payment.Direction(rawValue: Int32(sqlite3_column_int64(statement, 1))) else {
+                break
+            }
+            let amount = UInt64(sqlite3_column_int64(statement, 2))
+            let blockHeight = UInt32(sqlite3_column_int64(statement, 3))
+            payments.append(Payment(txID: txID, direction: direction, amount: amount, blockHeight: blockHeight))
+        }
+        try execute { sqlite3_reset(statement) }
+        return payments
+    }
+
     func selectTransactionBlockHeight(hash: Data) throws -> UInt32? {
         let statement = statements["selectTransactionBlockHeight"]
         try execute { hash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(hash.count), SQLITE_TRANSIENT) } }
@@ -301,28 +361,29 @@ public class Database {
         try execute { sqlite3_reset(statement) }
     }
 
-    public func calculateBalance(pubKeyHash: Data) throws -> Int64 {
+    public func calculateBalance(pubKeyHash: Data) throws -> UInt64 {
         let statement = statements["calculateBalance"]
         try execute { pubKeyHash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(pubKeyHash.count), SQLITE_TRANSIENT) } }
-        var balance: Int64 = 0
+        var balance: UInt64 = 0
         while sqlite3_step(statement) == SQLITE_ROW {
-            let value = sqlite3_column_int64(statement, 0)
-            balance += value
+            balance += UInt64(sqlite3_column_int64(statement, 0))
         }
-
         try execute { sqlite3_reset(statement) }
         return balance
     }
 
-    public func selectUTXOHashes(pubKeyHash: Data) throws -> [Data] {
+    public func selectUTXO(pubKeyHash: Data) throws -> [UnspentTransactionOutput] {
         let statement = statements["selectUTXO"]
         try execute { pubKeyHash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(pubKeyHash.count), SQLITE_TRANSIENT) } }
-        var hashes = [Data]()
+        var utxos = [UnspentTransactionOutput]()
         while sqlite3_step(statement) == SQLITE_ROW {
-            hashes.append(Data(bytes: sqlite3_column_blob(statement, 0)!, count: 32))
+            let hash = Data(bytes: sqlite3_column_blob(statement, 0)!, count: 32)
+            let index = UInt32(sqlite3_column_int64(statement, 2))
+            let value = UInt64(sqlite3_column_int64(statement, 3))
+            utxos.append(UnspentTransactionOutput(hash: hash, pubKeyHash: pubKeyHash, index: index, value: value))
         }
         try execute { sqlite3_reset(statement) }
-        return hashes
+        return utxos
     }
 
     func latestBlockHeader() throws -> Block? {

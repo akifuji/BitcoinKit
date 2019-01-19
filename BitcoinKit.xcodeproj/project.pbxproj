@@ -17,6 +17,8 @@
 		0C4FDFD921F1876900BC27B9 /* MurmurHashTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C4FDFD821F1876900BC27B9 /* MurmurHashTests.swift */; };
 		0C4FDFDC21F188F000BC27B9 /* HeadersMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C4FDFDB21F188F000BC27B9 /* HeadersMessageTests.swift */; };
 		0C4FDFDE21F18BB600BC27B9 /* BlockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C4FDFDD21F18BB600BC27B9 /* BlockTests.swift */; };
+		0C4FDFE021F2B3C200BC27B9 /* Payment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C4FDFDF21F2B3C200BC27B9 /* Payment.swift */; };
+		0C4FDFE221F2C35800BC27B9 /* UnspentTransactionOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C4FDFE121F2C35800BC27B9 /* UnspentTransactionOutput.swift */; };
 		0CC467B121DD847B007828F3 /* PrivateKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC467B021DD847B007828F3 /* PrivateKey.swift */; };
 		0CC467B321DD887F007828F3 /* Network.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC467B221DD887F007828F3 /* Network.swift */; };
 		0CC467B621DDC34F007828F3 /* Base58.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC467B521DDC34F007828F3 /* Base58.swift */; };
@@ -83,6 +85,8 @@
 		0C4FDFD821F1876900BC27B9 /* MurmurHashTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MurmurHashTests.swift; sourceTree = "<group>"; };
 		0C4FDFDB21F188F000BC27B9 /* HeadersMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadersMessageTests.swift; sourceTree = "<group>"; };
 		0C4FDFDD21F18BB600BC27B9 /* BlockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockTests.swift; sourceTree = "<group>"; };
+		0C4FDFDF21F2B3C200BC27B9 /* Payment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Payment.swift; sourceTree = "<group>"; };
+		0C4FDFE121F2C35800BC27B9 /* UnspentTransactionOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnspentTransactionOutput.swift; sourceTree = "<group>"; };
 		0CC467B021DD847B007828F3 /* PrivateKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateKey.swift; sourceTree = "<group>"; };
 		0CC467B221DD887F007828F3 /* Network.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Network.swift; sourceTree = "<group>"; };
 		0CC467B521DDC34F007828F3 /* Base58.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Base58.swift; sourceTree = "<group>"; };
@@ -279,6 +283,8 @@
 			isa = PBXGroup;
 			children = (
 				0CC4681621E34116007828F3 /* Database.swift */,
+				0C4FDFDF21F2B3C200BC27B9 /* Payment.swift */,
+				0C4FDFE121F2C35800BC27B9 /* UnspentTransactionOutput.swift */,
 			);
 			path = Wallet;
 			sourceTree = "<group>";
@@ -525,9 +531,11 @@
 				0CC4681721E34116007828F3 /* Database.swift in Sources */,
 				0CC4682721E56F40007828F3 /* BloomFilter.swift in Sources */,
 				0C4FDFC821E85E8A00BC27B9 /* InventoryMessage.swift in Sources */,
+				0C4FDFE021F2B3C200BC27B9 /* Payment.swift in Sources */,
 				0CC4681F21E4A086007828F3 /* Transaction.swift in Sources */,
 				0CC467E321E03E36007828F3 /* ByteStream.swift in Sources */,
 				0CC4682521E4A446007828F3 /* TransactionOutput.swift in Sources */,
+				0C4FDFE221F2C35800BC27B9 /* UnspentTransactionOutput.swift in Sources */,
 				0CC4682D21E58734007828F3 /* GetDataMessage.swift in Sources */,
 				0C4FDFCB21E96FE800BC27B9 /* Script.swift in Sources */,
 				0CC4680E21E2DE8E007828F3 /* VerackMessage.swift in Sources */,

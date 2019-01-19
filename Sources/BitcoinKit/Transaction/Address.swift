@@ -8,11 +8,11 @@
 
 import Foundation
 
-public protocol AddressProtocol {
+public protocol Address {
     var network: Network { get }
 }
 
-public struct LegacyAddress: AddressProtocol {
+public struct LegacyAddress: Address {
     public let network: Network
 
     public static func publicKeyHashToAddress(_ hash: Data) -> String {
