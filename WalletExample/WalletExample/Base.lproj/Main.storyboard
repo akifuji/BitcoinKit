@@ -45,6 +45,9 @@
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="tC6-Po-eAJ">
                                 <rect key="frame" x="147" y="340" width="71" height="30"/>
                                 <state key="normal" title="Send Coin"/>
+                                <connections>
+                                    <action selector="didTapSendButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="cio-1m-hbQ"/>
+                                </connections>
                             </button>
                             <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="qhR-qU-blW">
                                 <rect key="frame" x="0.0" y="398" width="375" height="380"/>

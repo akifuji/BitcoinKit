@@ -15,6 +15,13 @@ public struct TransactionOutput {
     }
     public let lockingScript: Data
 
+    public func scriptCode() -> Data {
+        var data = Data()
+        data += scriptLength.serialized()
+        data += lockingScript
+        return data
+    }
+
     public func serialized() -> Data {
         var data = Data()
         data += value

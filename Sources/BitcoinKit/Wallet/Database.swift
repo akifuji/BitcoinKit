@@ -73,7 +73,7 @@ public class Database {
                                         block_height INTEGER NOT NULL
                                     );
                                     CREATE VIEW IF NOT EXISTS view_utxo AS
-                                        SELECT tx.id, txout.pub_key_hash, txout.out_index, txout.value, txin.txout_id from tx
+                                        SELECT tx.id, txout.pub_key_hash, txout.out_index, txout.value, txout.pk_script, txin.txout_id from tx
                                         LEFT JOIN txout on id = txout.tx_id
                                         LEFT JOIN txin on id = txin.txout_id
                                         WHERE txout_id IS NULL;
@@ -372,7 +372,7 @@ public class Database {
         return balance
     }
 
-    public func selectUTXO(pubKeyHash: Data) throws -> [UnspentTransactionOutput] {
+    func selectUTXO(pubKeyHash: Data) throws -> [UnspentTransactionOutput] {
         let statement = statements["selectUTXO"]
         try execute { pubKeyHash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(pubKeyHash.count), SQLITE_TRANSIENT) } }
         var utxos = [UnspentTransactionOutput]()
@@ -380,7 +380,9 @@ public class Database {
             let hash = Data(bytes: sqlite3_column_blob(statement, 0)!, count: 32)
             let index = UInt32(sqlite3_column_int64(statement, 2))
             let value = UInt64(sqlite3_column_int64(statement, 3))
-            utxos.append(UnspentTransactionOutput(hash: hash, pubKeyHash: pubKeyHash, index: index, value: value))
+            let scriptLength = Int(sqlite3_column_bytes(statement, 4))
+            let script = Data(bytes: sqlite3_column_blob(statement, 4)!, count: scriptLength)
+            utxos.append(UnspentTransactionOutput(hash: hash, index: index, value: value, lockingScript: script, pubkeyHash: pubKeyHash))
         }
         try execute { sqlite3_reset(statement) }
         return utxos

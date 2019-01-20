@@ -47,12 +47,18 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         let privkey = try! PrivateKey.init(wif: "cQ2BQqKL44d9az7JuUx8b1CSGx5LkQrTM7UQKjYGnrHiMX5nUn5C")
         let pubkey = privkey.publicKey
         qrCodeImageView.image = generateVisualCode(address: pubkey.base58Address)
+
         let database = try! Database.default()
         payments = try! database.payments()
         peerManager = PeerManager(database: database, pubkeys: [pubkey])
         peerManager.delegate = self
-        peerManager.start()
+        peerManager.send(toAddress: "mjPAZNeeSid5F9BKt6hYKgfRWrADDtgCVp", amount: 10000)
+        //peerManager.start()
         txTableView.reloadData()
+    }
+    
+    @IBAction func didTapSendButton(_ sender: UIButton) {
+        peerManager.send(toAddress: "mjPAZNeeSid5F9BKt6hYKgfRWrADDtgCVp", amount: 10000)
     }
     
     private func updateBalance() {

@@ -32,6 +32,14 @@ public struct Transaction: Message {
     }
     var blockHeight: UInt32 = unconfirmed
 
+    init(version: UInt32, inputs: [TransactionInput], outputs: [TransactionOutput], lockTime: UInt32, blockHeight: UInt32 = unconfirmed) {
+        self.version = version
+        self.inputs = inputs
+        self.outputs = outputs
+        self.lockTime = lockTime
+        self.blockHeight = blockHeight
+    }
+
     public func serialized() -> Data {
         var data = Data()
         data += version

@@ -16,6 +16,7 @@ protocol PeerDelegate: class {
     func peerDidHandShake(_ peer: Peer)
     func peer(_ peer: Peer, didReceiveBlockHeaders blockHeaders: [Block])
     func peer(_ peer: Peer, didReceiveMerkleBkock merkleBlock: MerkleBlockMessage)
+    func peer(_ peer: Peer, didReceiveGetData inventory: InventoryItem)
     func peer(didReceiveTransaction message: Transaction)
     func peerDidDisconnect(_ peer: Peer)
 }
@@ -137,6 +138,10 @@ class Peer: NSObject {
                 handleTransactionMessage(payload: payload)
             case InventoryMessage.command:
                 handleInventoryMessage(payload: payload)
+            case GetDataMessage.command:
+                handleGetDataMessage(payload: payload)
+            case RejectMessage.command:
+                handleRejectMessage(payload: payload)
             default:
                 log("Other commands: \(command)")
             }
@@ -162,7 +167,7 @@ class Peer: NSObject {
         connection.cancel()
     }
 
-    private func sendMessage(_ message: Message) {
+    func sendMessage(_ message: Message) {
         let data = message.combineHeader(network.magic)
         connection.send(content: data, completion: .contentProcessed { [weak self] (sendError) in
             guard let strongSelf = self else {
@@ -263,7 +268,7 @@ class Peer: NSObject {
             log("got tx message before loading filter")
             return
         }
-        log("got tx")
+        log("got tx \(payload.hex)")
         if let merkleBlock = context.currentMerkleBlock {
             guard merkleBlock.hashes.contains(tx.hash) else {
                 log("tx hash is out of merkle block hashes")
@@ -300,6 +305,22 @@ class Peer: NSObject {
                 break
             }
         }
+    }
+
+    private func handleGetDataMessage(payload: Data) {
+        let getData = GetDataMessage.deserialize(payload)
+        log("got getdata with \(getData.count.underlyingValue) item(s)")
+        for inventoryItem in getData.inventoryItems {
+            delegate?.peer(self, didReceiveGetData: inventoryItem)
+        }
+    }
+
+    private func handleRejectMessage(payload: Data) {
+        let reject = RejectMessage.deserialize(payload)
+        let message = reject.message.description
+        let ccode = RejectMessage.CCode(rawValue: reject.ccode)
+        let reason = reject.reason.description
+        log("rejected \(message): reason: \(reason)")
     }
 
     private enum PeerError: Error {

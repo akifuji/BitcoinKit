@@ -21,6 +21,7 @@ public class PeerManager {
     var lastBlock: Block?
     var pubkeys: [PublicKey] = []
     var nextCheckpointIndex: Int = 0
+    var transactions = [Data: Transaction]()
 
     public weak var delegate: PeerManagerDelegate?
 
@@ -72,6 +73,20 @@ public class PeerManager {
             peer.sendGetDataMessage([inventory])
         }
     }
+
+    public func send(toAddress: String, amount: UInt64) {
+        let txBuilder = TransactionBuilder()
+        let pubkey = pubkeys[0]
+        let utxos = try! database.selectUTXO(pubKeyHash: pubkey.pubkeyHash)
+        let utxo = utxos.filter { $0.pubkeyHash == pubkeys[0].pubkeyHash }
+        let tx = txBuilder.buildTransaction(toAddress: toAddress, changeAddress: pubkey.base58Address, amount: amount, utxos: utxo, keys: [try! PrivateKey(wif: "cQ2BQqKL44d9az7JuUx8b1CSGx5LkQrTM7UQKjYGnrHiMX5nUn5C")])
+        transactions[tx.txID] = tx
+        let inventory = InventoryMessage(count: 1, inventoryItems: [InventoryItem(type: InventoryItem.ObjectType.transactionMessage.rawValue, hash: tx.txID)])
+        print("txID: \(tx.txID.hex)")
+        for peer in peers {
+            peer.sendMessage(inventory)
+        }
+    }
 }
 
 extension PeerManager: PeerDelegate {
@@ -84,8 +99,8 @@ extension PeerManager: PeerDelegate {
             let remoteNodeHeight = peer.context.remoteNodeHeight
             guard remoteNodeHeight + 10 > lastBlock.height else {
                 print("node isn't synced")
-                peer.disconnect()
-                peerDidDisconnect(peer)
+//                peer.disconnect()
+//                peerDidDisconnect(peer)
                 return
             }
             if lastBlock.height >= remoteNodeHeight {
@@ -167,13 +182,18 @@ extension PeerManager: PeerDelegate {
         delegate?.balanceChanged(balance)
     }
 
+    func peer(_ peer: Peer, didReceiveGetData inventory: InventoryItem) {
+        for (hash, tx) in transactions where hash == inventory.hash {
+            peer.sendMessage(tx)
+        }
+    }
+
     private func convertToMyPayment(_ transaction: Transaction) -> Payment? {
         // sum sendAmount if tx input points to UTXO
         var sendAmount: UInt64 = 0
         let utxos = try! database.selectUTXO(pubKeyHash: pubkeys[0].pubkeyHash)
         for transacstionInput in transaction.inputs {
             sendAmount = utxos
-                .filter { $0.pubKeyHash == pubkeys[0].pubkeyHash }
                 .filter { $0.hash == transacstionInput.previousOutput.hash }
                 .reduce(0) { $0 + $1.value }
         }
