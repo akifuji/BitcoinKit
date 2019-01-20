@@ -318,7 +318,6 @@ class Peer: NSObject {
     private func handleRejectMessage(payload: Data) {
         let reject = RejectMessage.deserialize(payload)
         let message = reject.message.description
-        let ccode = RejectMessage.CCode(rawValue: reject.ccode)
         let reason = reject.reason.description
         log("rejected \(message): reason: \(reason)")
     }

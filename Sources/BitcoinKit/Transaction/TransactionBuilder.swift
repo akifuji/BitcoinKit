@@ -17,8 +17,9 @@ class TransactionBuilder {
         self.dustThreshhold = dustThreshhold
     }
 
-    func buildTransaction(toAddress: String, changeAddress: String, amount: UInt64, utxos: [UnspentTransactionOutput], keys: [PrivateKey]) -> Transaction {
-        let (utxosToSpend, fee) = try! selectUTXOs(from: utxos, targetValue: amount)
+    func buildTransaction(toAddress: String, changeAddress: String, amount: UInt64, utxos: [UnspentTransactionOutput], keys: [PrivateKey]) throws -> Transaction {
+        // Create outputs
+        let (utxosToSpend, fee) = try selectUTXOs(from: utxos, targetValue: amount)
         let totalAmount: UInt64 = utxosToSpend.sum()
         let change: UInt64 = totalAmount - amount - fee
         let destinations: [(String, UInt64)] = [(toAddress, amount), (changeAddress, change)]
@@ -28,60 +29,32 @@ class TransactionBuilder {
             let lockingScript = Script.buildP2PKHLockingScript(pubKeyHash: pubkeyHash)
             return TransactionOutput(value: amount, lockingScript: lockingScript)
         }
-
+        // Create inputs
         var signingInputs = utxos.map { TransactionInput(previousOutput: TransactionOutPoint(hash: $0.hash, index: $0.index), signatureScript: Data(), sequence: UInt32.max)
         }
-        var signingTransaction: Transaction {
-            return Transaction(version: 1, inputs: signingInputs, outputs: outputs, lockTime: 0)
-        }
+        // Create signature and sign tx
         for (inputIndex, utxo) in utxosToSpend.enumerated() {
             let keysOfUtxo: [PrivateKey] = keys.filter { $0.publicKey.pubkeyHash == utxo.pubkeyHash }
             guard let key = keysOfUtxo.first else {
-                fatalError("key is missing")
+                throw TransactionBuilderError.error("key is missing")
             }
-
             let inputsToSerialize = (0..<signingInputs.count).map { index -> TransactionInput in
-                let txInput = signingInputs[inputIndex]
+                let txInput = signingInputs[index]
                 let script = inputIndex == index ? utxo.lockingScript : Data()
                 return TransactionInput(previousOutput: txInput.previousOutput, signatureScript: script, sequence: txInput.sequence)
             }
             let txToSerialize = Transaction(version: 1, inputs: inputsToSerialize, outputs: outputs, lockTime: 0)
             let serializedTx = txToSerialize.serialized()
-            //let sighash = serializedTx + 0x01 + Crypto.sha256sha256(serializedTx)
-            let sighash = Crypto.sha256sha256(serializedTx + UInt32(0x01))
-            let signature = try! Crypto.sign(sighash, privateKey: key)
-//        let hashType = SighashType.BTC.ALL
-//        for (i, utxo) in utxosToSpend.enumerated() {
-//            // Select key
-//            let pubkeyHash: Data = Script.getPublicKeyHash(from: utxo.lockingScript)
-//
-//            let keysOfUtxo: [PrivateKey] = keys.filter { $0.publicKey.pubkeyHash == pubkeyHash }
-//
-//            guard let key = keysOfUtxo.first else {
-//                continue
-//            }
-//            // Sign transaction hash
-//            let txOutput = TransactionOutput(value: utxo.value, lockingScript: utxo.lockingScript)
-//            let sighash: Data = signingTransaction.signatureHash(for: txOutput, inputIndex: i, hashType: SighashType.BTC.ALL)
-//            let signature: Data = try! Crypto.sign(sighash, privateKey: key)
-//            let txin = signingInputs[i]
-//            let pubkey = key.publicKey
-
+            let sighash = Crypto.sha256sha256(serializedTx + UInt32(0x01))  // 0x01: SIGHASH_ALL
+            let signature = try Crypto.sign(sighash, privateKey: key)
             let pubkey = key.publicKey
-            // Create Signature Script
+            // Create unlocking Script
             let sigWithHashType: Data = signature + UInt8(0x01)
-            print(sigWithHashType.hex)
-            let a = UInt8(sigWithHashType.count)
-            let b = UInt8(pubkey.data.count)
-            let unlockingScipt = Data() + a + sigWithHashType + b + pubkey.data
-//            let unlockingScript = sigWithHashType + pubkey.data
-//            print(unlockingScript.hex)
-            // Update TransactionInput
+            let unlockingScipt = Data(bytes: [UInt8(sigWithHashType.count)]) + sigWithHashType + Data(bytes: [UInt8(pubkey.data.count)]) + pubkey.data
             let txInput = signingInputs[inputIndex]
             signingInputs[inputIndex] = TransactionInput(previousOutput: txInput.previousOutput, signatureScript: unlockingScipt, sequence: txInput.sequence)
         }
-        print(signingTransaction.serialized().hex)
-        return signingTransaction
+        return Transaction(version: 1, inputs: signingInputs, outputs: outputs, lockTime: 0)
     }
 
     private func selectUTXOs(from utxos: [UnspentTransactionOutput], targetValue: UInt64) throws -> (utxos: [UnspentTransactionOutput], fee: UInt64) {
@@ -145,10 +118,10 @@ class TransactionBuilder {
         }
         return UInt64(txSize) * feePerByte
     }
+}
 
-    enum TransactionBuilderError: Error {
-        case error(String)
-    }
+enum TransactionBuilderError: Error {
+    case error(String)
 }
 
 private extension Array {

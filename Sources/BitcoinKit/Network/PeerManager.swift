@@ -79,10 +79,17 @@ public class PeerManager {
         let pubkey = pubkeys[0]
         let utxos = try! database.selectUTXO(pubKeyHash: pubkey.pubkeyHash)
         let utxo = utxos.filter { $0.pubkeyHash == pubkeys[0].pubkeyHash }
-        let tx = txBuilder.buildTransaction(toAddress: toAddress, changeAddress: pubkey.base58Address, amount: amount, utxos: utxo, keys: [try! PrivateKey(wif: "cQ2BQqKL44d9az7JuUx8b1CSGx5LkQrTM7UQKjYGnrHiMX5nUn5C")])
-        transactions[tx.txID] = tx
-        let inventory = InventoryMessage(count: 1, inventoryItems: [InventoryItem(type: InventoryItem.ObjectType.transactionMessage.rawValue, hash: tx.txID)])
-        print("txID: \(tx.txID.hex)")
+        var transaction: Transaction!
+        do {
+            transaction = try txBuilder.buildTransaction(toAddress: toAddress, changeAddress: pubkey.base58Address, amount: amount, utxos: utxo, keys: [try! PrivateKey(wif: "cQ2BQqKL44d9az7JuUx8b1CSGx5LkQrTM7UQKjYGnrHiMX5nUn5C")])
+        } catch TransactionBuilderError.error(let message) {
+            print("failt to build tx: \(message)")
+        } catch let error {
+            print(error.localizedDescription)
+        }
+        transactions[transaction.txID] = transaction
+        let inventory = InventoryMessage(count: 1, inventoryItems: [InventoryItem(type: InventoryItem.ObjectType.transactionMessage.rawValue, hash: transaction.txID)])
+        print("txID: \(transaction.txID.hex)")
         for peer in peers {
             peer.sendMessage(inventory)
         }
@@ -99,8 +106,8 @@ extension PeerManager: PeerDelegate {
             let remoteNodeHeight = peer.context.remoteNodeHeight
             guard remoteNodeHeight + 10 > lastBlock.height else {
                 print("node isn't synced")
-//                peer.disconnect()
-//                peerDidDisconnect(peer)
+                peer.disconnect()
+                peerDidDisconnect(peer)
                 return
             }
             if lastBlock.height >= remoteNodeHeight {
