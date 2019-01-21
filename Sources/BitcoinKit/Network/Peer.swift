@@ -19,17 +19,17 @@ protocol PeerDelegate: class {
     func peer(_ peer: Peer, didReceiveGetData inventory: InventoryItem)
     func peer(didReceiveTransaction message: Transaction)
     func peerDidDisconnect(_ peer: Peer)
-    func peer(_ peer: Peer, logged message: String)
+    func peer(_ peer: Peer, logged log: PeerLog)
 }
 
 extension PeerDelegate {
-    func peer(_ peer: Peer, logged message: String) {}
+    func peer(_ peer: Peer, logged log: PeerLog) {}
 }
 
 class Peer: NSObject {
-    let network: Network
-    let host: String
-    let connection: NWConnection
+    private let network: Network
+    private let host: String
+    private let connection: NWConnection
     let context = Context()
     class Context {
         var packets = Data()
@@ -42,35 +42,30 @@ class Peer: NSObject {
         var currentGotTxNumber: UInt32 = 0  // the number of gotten tx following a merkle block
         var remoteNodeHeight: Int32 = -1
     }
-    public weak var delegate: PeerDelegate?
+    weak var delegate: PeerDelegate?
 
-    public init(host: String, network: Network = .testnet) {
+    init(host: String, network: Network) {
         self.host = host
         self.network = network
         connection = NWConnection(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: UInt16(network.port))!, using: .tcp)
     }
 
-    public convenience init(network: Network = .testnet) {
-        let dnsSeeds: [String] = network.dnsSeeds
-        self.init(host: dnsSeeds[Int(arc4random_uniform(UInt32(dnsSeeds.count)))], network: network)
-    }
-
-    public func connect() {
+    func connect() {
         connection.stateUpdateHandler = { newState in
             switch newState {
             case .ready:
-                self.log("Connection ready")
+                self.log(PeerLog(message: "connection ready", type: .other))
                 self.startConnect()
             case .waiting(let error):
-                self.log("Connection waiting: \(error)")
+                self.log(PeerLog(message: "connection waiting: \(error)", type: .error))
             case .failed(let error):
-                self.log("Connection failed: \(error)")
+                self.log(PeerLog(message: "connection failed: \(error)", type: .error))
             default:
                 break
             }
         }
         readHead()
-        log("Connecting: \(host):\(network.port)")
+        log(PeerLog(message: "connecting: \(host)", type: .other))
         connection.start(queue: .main)
     }
 
@@ -81,10 +76,10 @@ class Peer: NSObject {
                 return
             }
             if let error = error {
-                strongSelf.log(error.debugDescription)
+                strongSelf.log(PeerLog(message: error.debugDescription, type: .error))
             }
             guard let _data = data, let messageHeader = MessageHeader.deserialize(_data) else {
-                strongSelf.log("failed to deserialize messageHeader: \(String(describing: data?.hex))")
+                strongSelf.log(PeerLog(message: "failed to deserialize messageHeader: \(String(describing: data?.hex))", type: .error))
                 return
             }
             let command: String = messageHeader.command
@@ -108,10 +103,10 @@ class Peer: NSObject {
                 return
             }
             if let error = error {
-                strongSelf.log(error.debugDescription)
+                strongSelf.log(PeerLog(message: error.debugDescription, type: .error))
             }
             guard let data = data else {
-                strongSelf.log("Data is nil")
+                strongSelf.log(PeerLog(message: "data is nil", type: .error))
                 return
             }
             if strongSelf.isSucceeededHandle(command: command, payload: data) {
@@ -125,7 +120,7 @@ class Peer: NSObject {
     private func isSucceeededHandle(command: String, payload: Data) -> Bool {
         // if we receive a non-tx message, merkleblock is done
         if command != Transaction.command, let merkleBlock = context.currentMerkleBlock {
-            log("incomplete merkleblock, expected \(merkleBlock.totalTransactions) txs, but got only \(context.currentGotTxNumber)")
+            log(PeerLog(message: "incomplete merkleblock, expected \(merkleBlock.totalTransactions) txs, but got only \(context.currentGotTxNumber)", type: .error))
             context.currentMerkleBlock = nil
             context.currentGotTxNumber = 0
         }
@@ -148,11 +143,11 @@ class Peer: NSObject {
             case RejectMessage.command:
                 handleRejectMessage(payload: payload)
             default:
-                log("Other commands: \(command)")
+                log(PeerLog(message: "Other commands: \(command)", type: .from))
             }
             return true
         } catch PeerError.error(let message) {
-            log(message)
+            log(PeerLog(message: message, type: .error))
             return false
         } catch {
             return false
@@ -168,7 +163,7 @@ class Peer: NSObject {
     }
 
     public func disconnect() {
-        log("disconnected")
+        log(PeerLog(message: "disconnected", type: .other))
         connection.cancel()
     }
 
@@ -180,9 +175,9 @@ class Peer: NSObject {
                 return
             }
             if let sendError = sendError {
-                strongSelf.log("SendError: \(sendError.debugDescription)")
+                strongSelf.log(PeerLog(message: "SendError: \(sendError.debugDescription)", type: .error))
             }
-            strongSelf.log("send \(type(of: message).command) message")
+            strongSelf.log(PeerLog(message: "send \(type(of: message).command) message", type: .to))
         })
     }
 
@@ -232,7 +227,7 @@ class Peer: NSObject {
         guard let startHeight = versionMessage.startHeight else {
             throw PeerError.error("version message from this node should have startHeight")
         }
-        log("got verversion: \(versionMessage.version), useragent: \(versionMessage.userAgent?.value ?? "")")
+        log(PeerLog(message: "got version: \(versionMessage.version), \(versionMessage.userAgent?.value ?? "")", type: .from))
         context.gotVersion = true
         context.remoteNodeHeight = startHeight
         sendVerackMessage()
@@ -242,13 +237,13 @@ class Peer: NSObject {
         guard context.gotVersion && !context.gotVerack else {
             throw PeerError.error("got unexpected verack")
         }
-        log("got verack. Handshake complete.")
+        log(PeerLog(message: "got verack. Handshake complete.", type: .from))
         delegate?.peerDidHandShake(self)
     }
 
     private func handleHeadersMessage(payload: Data) throws {
         let headersMessage = try HeadersMessage.deserialize(payload)
-        log("got \(headersMessage.count) header(s)")
+        log(PeerLog(message: "got \(headersMessage.count) header(s)", type: .from))
         delegate?.peer(self, didReceiveBlockHeaders: headersMessage.headers)
     }
 
@@ -256,32 +251,32 @@ class Peer: NSObject {
         let merkleBlockMessage = MerkleBlockMessage.deserialize(payload)
         guard merkleBlockMessage.isValid() else {
             print(payload.hex)
-            log("malformed merkleblock message")
+            log(PeerLog(message: "malformed merkleblock message", type: .error))
             return
         }
         guard context.sentFilter else {
-            log("got merkleblock message before loading filter")
+            log(PeerLog(message: "got merkleblock message before loading filter", type: .from))
             return
         }
-        log("got merkleblock")
+        log(PeerLog(message: "got merkleblock", type: .from))
         delegate?.peer(self, didReceiveMerkleBkock: merkleBlockMessage)
     }
 
     private func handleTransactionMessage(payload: Data) {
         let tx = Transaction.deserialize(payload)
         guard context.sentFilter else {
-            log("got tx message before loading filter")
+            log(PeerLog(message: "got tx message before loading filter", type: .error))
             return
         }
-        log("got tx \(payload.hex)")
+        log(PeerLog(message: "got tx \(payload.hex)", type: .from))
         if let merkleBlock = context.currentMerkleBlock {
             guard merkleBlock.hashes.contains(tx.hash) else {
-                log("tx hash is out of merkle block hashes")
+                log(PeerLog(message: "tx hash is out of merkle block hashes", type: .error))
                 return
             }
             context.currentGotTxNumber += 1
             if context.currentGotTxNumber == merkleBlock.totalTransactions {
-                log("txs following a merkle block has completed")
+                log(PeerLog(message: "txs following a merkle block has completed", type: .other))
                 context.currentMerkleBlock = nil
                 context.currentGotTxNumber = 0
             }
@@ -292,13 +287,13 @@ class Peer: NSObject {
     private func handleInventoryMessage(payload: Data) {
         let inventory = InventoryMessage.deserialize(payload)
         guard context.sentFilter else {
-            log("got inv message before loading a filter")
+            log(PeerLog(message: "got inv message before loading a filter", type: .error))
             return
         }
-        log("got inv with \(inventory.count.underlyingValue) item(s)")
+        log(PeerLog(message: "got inv with \(inventory.count.underlyingValue) item(s)", type: .from))
         for item in inventory.inventoryItems {
             let type = InventoryItem.ObjectType(rawValue: item.type) ?? .unknown
-            log("got \(type) type inv message")
+            log(PeerLog(message: "got \(type) type inv message", type: .from))
             switch type {
             case .blockMessage:
                 let sendItem = InventoryItem(type: InventoryItem.ObjectType.filteredBlockMessage.rawValue, hash: item.hash)
@@ -314,7 +309,7 @@ class Peer: NSObject {
 
     private func handleGetDataMessage(payload: Data) {
         let getData = GetDataMessage.deserialize(payload)
-        log("got getdata with \(getData.count.underlyingValue) item(s)")
+        log(PeerLog(message: "got getdata with \(getData.count.underlyingValue) item(s)", type: .from))
         for inventoryItem in getData.inventoryItems {
             delegate?.peer(self, didReceiveGetData: inventoryItem)
         }
@@ -324,15 +319,25 @@ class Peer: NSObject {
         let reject = RejectMessage.deserialize(payload)
         let message = reject.message.description
         let reason = reject.reason.description
-        log("rejected \(message): reason: \(reason)")
+        log(PeerLog(message: "rejected \(message): reason: \(reason)", type: .error))
     }
 
     private enum PeerError: Error {
         case error(String)
     }
 
-    func log(_ message: String) {
-        print("\(message)")
-        delegate?.peer(self, logged: message)
+    func log(_ log: PeerLog) {
+        print(log.message)
+        delegate?.peer(self, logged: log)
+    }
+}
+
+public struct PeerLog {
+    public let message: String
+    public let type: LogType
+    public let date = Date()
+
+    public enum LogType {
+        case from, to, error, other
     }
 }

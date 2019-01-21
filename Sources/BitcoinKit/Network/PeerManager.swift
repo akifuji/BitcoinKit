@@ -11,7 +11,7 @@ import Foundation
 public protocol PeerManagerDelegate: class {
     func balanceChanged(_ balance: UInt64)
     func paymentAdded(_ payment: Payment)
-    func logged(_ message: String, date: Date)
+    func logged(_ log: PeerLog)
 }
 
 public class PeerManager {
@@ -42,7 +42,8 @@ public class PeerManager {
 
     public func start() {
         for _ in peers.count..<maxConnections {
-            let peer = Peer(host: network.dnsSeeds[0], network: network)
+            let dnsSeeds: [String] = network.dnsSeeds
+            let peer = Peer(host: dnsSeeds[Int(arc4random_uniform(UInt32(dnsSeeds.count)))], network: network)
             peer.delegate = self
             peer.connect()
             peers.append(peer)
@@ -160,8 +161,7 @@ extension PeerManager: PeerDelegate {
     func peer(_ peer: Peer, didReceiveMerkleBkock merkleBlock: MerkleBlockMessage) {
         // assume that last block is the second newest one
         guard let lastBlock = lastBlock, lastBlock.blockHash == merkleBlock.prevBlock else {
-            peer.log("last block hash does not match the prev block of merkle block")
-            peer.disconnect()
+            peer.log(PeerLog(message: "last block hash does not match the prev block of merkle block", type: .error))
             return
         }
         peer.context.currentMerkleBlock = merkleBlock
@@ -220,7 +220,7 @@ extension PeerManager: PeerDelegate {
         return Payment(txID: transaction.txID, direction: direction, amount: amount)
     }
 
-    func peer(_ peer: Peer, logged message: String) {
-        delegate?.logged(message, date: Date())
+    func peer(_ peer: Peer, logged log: PeerLog) {
+        delegate?.logged(log)
     }
 }

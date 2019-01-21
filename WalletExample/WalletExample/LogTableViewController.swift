@@ -10,14 +10,15 @@ import UIKit
 
 class LogTableViewController: UITableViewController {
     
+    @IBOutlet weak var navigationBar: UINavigationBar!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         NotificationCenter.default.addObserver(self, selector: #selector(logged(notification:)), name: Notification.Name.Wallet.logged, object: nil)
-        tableView.reloadData()
     }
     
-    override func viewDidAppear(_ animated: Bool) {
-        tableView.reloadData()
+    override func viewWillAppear(_ animated: Bool) {
+        navigationBar.topItem?.title = "Log History"
     }
     
     @objc
@@ -37,7 +38,16 @@ class LogTableViewController: UITableViewController {
         let cell = tableView.dequeueReusableCell(withIdentifier: "logCell", for: indexPath)
         let log = Wallet.shared.logs[indexPath.row]
         cell.textLabel?.text = log.message
-        cell.detailTextLabel?.text = log.date.description
+        switch log.type {
+        case .from:
+            cell.backgroundColor = #colorLiteral(red: 0.721568644, green: 0.8862745166, blue: 0.5921568871, alpha: 1)
+        case .to:
+            cell.backgroundColor = #colorLiteral(red: 0.4745098054, green: 0.8392156959, blue: 0.9764705896, alpha: 1)
+        case .other:
+            cell.backgroundColor = #colorLiteral(red: 0.9764705896, green: 0.850980401, blue: 0.5490196347, alpha: 1)
+        case .error:
+            cell.backgroundColor = #colorLiteral(red: 0.9098039269, green: 0.4784313738, blue: 0.6431372762, alpha: 1)
+        }
         return cell
     }
 }

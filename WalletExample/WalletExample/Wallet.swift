@@ -10,12 +10,13 @@ import Foundation
 import BitcoinKit
 
 class Wallet: PeerManagerDelegate {
+    
     static let shared = Wallet()
     
     var peerManager: PeerManager!
     var balance: UInt64 = 0
     var payments = [Payment]()
-    var logs = [Log]()
+    var logs = [PeerLog]()
     var privateKey: PrivateKey
     var publicKey: PublicKey {
         return privateKey.publicKey
@@ -39,8 +40,8 @@ class Wallet: PeerManagerDelegate {
         NotificationCenter.default.post(name: Notification.Name.Wallet.paymentAdded, object: self)
     }
     
-    func logged(_ message: String, date: Date) {
-        logs.append(Log(message: message, date: date))
+    func logged(_ log: PeerLog) {
+        logs.append(log)
         NotificationCenter.default.post(name: Notification.Name.Wallet.logged, object: self)
     }
 }

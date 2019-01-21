@@ -133,11 +133,9 @@ public class Testnet: Network {
     }
     public override var dnsSeeds: [String] {
         return [
-            //"testnet-seed.bitcoin.jonasschnelli.ch", // Jonas Schnelli
-            "testnet-seed.bitcoin.petertodd.org"    // Peter Todd
-            //"testnet-seed.breadwallet.com.",
-            //"testnet-seed.bluematt.me.",
-            //"testnet-seed.bitcoin.schildbach.de."
+            "testnet-seed.bitcoin.jonasschnelli.ch", // Jonas Schnelli
+            "testnet-seed.bitcoin.petertodd.org", // Peter Todd
+            "testnet-seed.bluematt.me."
         ]
     }
     override var genesisBlock: Data {
