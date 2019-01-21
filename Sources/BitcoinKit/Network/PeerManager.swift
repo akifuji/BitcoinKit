@@ -11,6 +11,7 @@ import Foundation
 public protocol PeerManagerDelegate: class {
     func balanceChanged(_ balance: UInt64)
     func paymentAdded(_ payment: Payment)
+    func logged(_ message: String, date: Date)
 }
 
 public class PeerManager {
@@ -217,5 +218,9 @@ extension PeerManager: PeerDelegate {
         let amount: UInt64 = receiveAmount - sendAmount
         let direction: Payment.Direction = amount > 0 ? .received : .sent
         return Payment(txID: transaction.txID, direction: direction, amount: amount)
+    }
+
+    func peer(_ peer: Peer, logged message: String) {
+        delegate?.logged(message, date: Date())
     }
 }

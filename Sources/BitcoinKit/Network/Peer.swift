@@ -19,6 +19,11 @@ protocol PeerDelegate: class {
     func peer(_ peer: Peer, didReceiveGetData inventory: InventoryItem)
     func peer(didReceiveTransaction message: Transaction)
     func peerDidDisconnect(_ peer: Peer)
+    func peer(_ peer: Peer, logged message: String)
+}
+
+extension PeerDelegate {
+    func peer(_ peer: Peer, logged message: String) {}
 }
 
 class Peer: NSObject {
@@ -328,5 +333,6 @@ class Peer: NSObject {
 
     func log(_ message: String) {
         print("\(message)")
+        delegate?.peer(self, logged: message)
     }
 }

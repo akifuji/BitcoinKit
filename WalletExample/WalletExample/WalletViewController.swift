@@ -25,53 +25,54 @@
 import UIKit
 import BitcoinKit
 
-class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+class WalletViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     @IBOutlet private weak var qrCodeImageView: UIImageView!
     @IBOutlet private weak var addressLabel: UILabel!
     @IBOutlet private weak var balanceLabel: UILabel!
     @IBOutlet private weak var txTableView: UITableView!
     
-    var balance: UInt64 = 0
-    var payments = [Payment]()
-    var peerManager: PeerManager!
+    let wallet = Wallet.shared
     
     override func viewDidLoad() {
         super.viewDidLoad()
         txTableView.delegate = self
         txTableView.dataSource = self
-         let dbPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
-         print("DB Path: \(dbPath)")
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(balanceChanged(notification:)), name: Notification.Name.Wallet.balanceChanged, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(paymentAdded(notification:)), name: Notification.Name.Wallet.paymentAdded, object: nil)
+//        let dbPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+//        print("DB Path: \(dbPath)")
     }
     
     override func viewWillAppear(_ animated: Bool) {
-        let privkey = try! PrivateKey.init(wif: "cQ2BQqKL44d9az7JuUx8b1CSGx5LkQrTM7UQKjYGnrHiMX5nUn5C")
-        let pubkey = privkey.publicKey
-        qrCodeImageView.image = generateVisualCode(address: pubkey.base58Address)
-
-        let database = try! Database.default()
-        payments = try! database.payments()
-        peerManager = PeerManager(database: database, pubkeys: [pubkey])
-        peerManager.delegate = self
-        peerManager.send(toAddress: "mjPAZNeeSid5F9BKt6hYKgfRWrADDtgCVp", amount: 10000)
-        //peerManager.start()
-        txTableView.reloadData()
+        qrCodeImageView.image = generateVisualCode(address: wallet.publicKey.base58Address)
     }
     
     @IBAction func didTapSendButton(_ sender: UIButton) {
-        peerManager.send(toAddress: "mjPAZNeeSid5F9BKt6hYKgfRWrADDtgCVp", amount: 10000)
+        wallet.peerManager.send(toAddress: "mjPAZNeeSid5F9BKt6hYKgfRWrADDtgCVp", amount: 10000)
     }
     
-    private func updateBalance() {
-        balanceLabel.text = "Balance: \(balance)"
+    @objc
+    func balanceChanged(notification: Notification) {
+        balanceLabel.text = "Balance: \(wallet.balance)"
+    }
+    
+    @objc
+    func paymentAdded(notification: Notification) {
+        txTableView.reloadData()
+    }
+    
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 1
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return payments.count
+        return wallet.payments.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "transactionCell", for: indexPath)
-        let payment = payments[indexPath.row]
+        let payment = wallet.payments[indexPath.row]
         if payment.direction == .sent {
             cell.textLabel?.text = "- \(payment.amount)"
         } else {
@@ -98,14 +99,3 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     }
 }
 
-extension ViewController: PeerManagerDelegate {
-    func balanceChanged(_ balance: UInt64) {
-        self.balance = balance
-        updateBalance()
-    }
-    
-    func paymentAdded(_ payment: Payment) {
-        payments.append(payment)
-        txTableView.reloadData()
-    }
-}
