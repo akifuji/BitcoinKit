@@ -140,10 +140,12 @@ class Peer: NSObject {
                 handleInventoryMessage(payload: payload)
             case GetDataMessage.command:
                 handleGetDataMessage(payload: payload)
+            case PingMessage.command:
+                handlePingMessage(payload: payload)
             case RejectMessage.command:
                 handleRejectMessage(payload: payload)
             default:
-                log(PeerLog(message: "Other commands: \(command)", type: .from))
+                log(PeerLog(message: "got \(command) message", type: .from))
             }
             return true
         } catch PeerError.error(let message) {
@@ -165,6 +167,7 @@ class Peer: NSObject {
     public func disconnect() {
         log(PeerLog(message: "disconnected", type: .other))
         connection.cancel()
+        delegate?.peerDidDisconnect(self)
     }
 
     func sendMessage(_ message: Message) {
@@ -175,7 +178,7 @@ class Peer: NSObject {
                 return
             }
             if let sendError = sendError {
-                strongSelf.log(PeerLog(message: "SendError: \(sendError.debugDescription)", type: .error))
+                strongSelf.log(PeerLog(message: "fail to send \(type(of: message).command): \(sendError.debugDescription)", type: .error))
             }
             strongSelf.log(PeerLog(message: "send \(type(of: message).command) message", type: .to))
         })
@@ -227,7 +230,7 @@ class Peer: NSObject {
         guard let startHeight = versionMessage.startHeight else {
             throw PeerError.error("version message from this node should have startHeight")
         }
-        log(PeerLog(message: "got version: \(versionMessage.version), \(versionMessage.userAgent?.value ?? "")", type: .from))
+        log(PeerLog(message: "got version: \(versionMessage.version) \(versionMessage.userAgent?.value ?? "")", type: .from))
         context.gotVersion = true
         context.remoteNodeHeight = startHeight
         sendVerackMessage()
@@ -313,6 +316,13 @@ class Peer: NSObject {
         for inventoryItem in getData.inventoryItems {
             delegate?.peer(self, didReceiveGetData: inventoryItem)
         }
+    }
+
+    private func handlePingMessage(payload: Data) {
+        let ping = PingMessage.deserialize(payload)
+        log(PeerLog(message: "got ping message", type: .from))
+        let pong = PongMessage(nonce: ping.nonce)
+        sendMessage(pong)
     }
 
     private func handleRejectMessage(payload: Data) {

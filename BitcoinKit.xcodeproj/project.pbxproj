@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0C13F92921F5965300120974 /* PongMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C13F92821F5965300120974 /* PongMessage.swift */; };
+		0C13F92B21F596D600120974 /* PingMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C13F92A21F596D600120974 /* PingMessage.swift */; };
 		0C4FDFC821E85E8A00BC27B9 /* InventoryMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C4FDFC721E85E8A00BC27B9 /* InventoryMessage.swift */; };
 		0C4FDFCB21E96FE800BC27B9 /* Script.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C4FDFCA21E96FE800BC27B9 /* Script.swift */; };
 		0C4FDFCD21EAF18600BC27B9 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C4FDFCC21EAF18600BC27B9 /* Message.swift */; };
@@ -78,6 +80,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0C13F92821F5965300120974 /* PongMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PongMessage.swift; sourceTree = "<group>"; };
+		0C13F92A21F596D600120974 /* PingMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMessage.swift; sourceTree = "<group>"; };
 		0C4FDFC721E85E8A00BC27B9 /* InventoryMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryMessage.swift; sourceTree = "<group>"; };
 		0C4FDFCA21E96FE800BC27B9 /* Script.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Script.swift; sourceTree = "<group>"; };
 		0C4FDFCC21EAF18600BC27B9 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
@@ -311,6 +315,8 @@
 				0CC4682C21E58734007828F3 /* GetDataMessage.swift */,
 				0C4FDFC721E85E8A00BC27B9 /* InventoryMessage.swift */,
 				0C4FDFEB21F434D500BC27B9 /* RejectMessage.swift */,
+				0C13F92A21F596D600120974 /* PingMessage.swift */,
+				0C13F92821F5965300120974 /* PongMessage.swift */,
 			);
 			path = Message;
 			sourceTree = "<group>";
@@ -534,7 +540,9 @@
 				0CC467B621DDC34F007828F3 /* Base58.swift in Sources */,
 				0CC4682321E4A1DA007828F3 /* TransactionOutPoint.swift in Sources */,
 				0CC467E921E04A80007828F3 /* NetworkAddress.swift in Sources */,
+				0C13F92921F5965300120974 /* PongMessage.swift in Sources */,
 				0C4FDFE821F3E4BA00BC27B9 /* OpCode.swift in Sources */,
+				0C13F92B21F596D600120974 /* PingMessage.swift in Sources */,
 				0CC467B321DD887F007828F3 /* Network.swift in Sources */,
 				1419E83B202CDBE500FCB0BE /* BitcoinKitPrivate.m in Sources */,
 				0CC4682F21E587A4007828F3 /* InventoryItem.swift in Sources */,
