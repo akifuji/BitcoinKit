@@ -41,6 +41,7 @@ public class PeerManager {
     }
 
     public func start() {
+        peers.removeAll()
         for _ in peers.count..<maxConnections {
             let dnsSeeds: [String] = network.dnsSeeds
             let peer = Peer(host: dnsSeeds[Int(arc4random_uniform(UInt32(dnsSeeds.count)))], network: network)
@@ -107,9 +108,8 @@ extension PeerManager: PeerDelegate {
         if let lastBlock = lastBlock {
             let remoteNodeHeight = peer.context.remoteNodeHeight
             guard remoteNodeHeight + 10 > lastBlock.height else {
-                print("node isn't synced")
+                peer.log(PeerLog(message: "node isn't synced: height is \(remoteNodeHeight)", type: .other))
                 peer.disconnect()
-                peerDidDisconnect(peer)
                 return
             }
             if lastBlock.height >= remoteNodeHeight {
