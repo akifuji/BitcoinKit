@@ -15,9 +15,9 @@ private let minimumProtocolVersion: Int32 = 70_011 // peers earlier than this pr
 protocol PeerDelegate: class {
     func peerDidHandShake(_ peer: Peer)
     func peer(_ peer: Peer, didReceiveBlockHeaders blockHeaders: [Block])
-    func peer(_ peer: Peer, didReceiveMerkleBkock merkleBlock: MerkleBlockMessage)
+    func peer(_ peer: Peer, didReceiveMerkleBlock merkleBlock: MerkleBlockMessage)
     func peer(_ peer: Peer, didReceiveGetData inventory: InventoryItem)
-    func peer(didReceiveTransaction message: Transaction)
+    func peer(_ peer: Peer, didReceiveTransaction message: Transaction)
     func peerDidDisconnect(_ peer: Peer)
     func peer(_ peer: Peer, logged log: PeerLog)
 }
@@ -117,6 +117,7 @@ class Peer: NSObject {
         })
     }
 
+    // swiftlint:disable:next cyclomatic_complexity
     private func isSucceeededHandle(command: String, payload: Data) -> Bool {
         // if we receive a non-tx message, merkleblock is done
         if command != Transaction.command, let merkleBlock = context.currentMerkleBlock {
@@ -262,7 +263,7 @@ class Peer: NSObject {
             return
         }
         log(PeerLog(message: "got merkleblock", type: .from))
-        delegate?.peer(self, didReceiveMerkleBkock: merkleBlockMessage)
+        delegate?.peer(self, didReceiveMerkleBlock: merkleBlockMessage)
     }
 
     private func handleTransactionMessage(payload: Data) {
@@ -284,7 +285,7 @@ class Peer: NSObject {
                 context.currentGotTxNumber = 0
             }
         }
-        delegate?.peer(didReceiveTransaction: tx)
+        delegate?.peer(self, didReceiveTransaction: tx)
     }
 
     private func handleInventoryMessage(payload: Data) {

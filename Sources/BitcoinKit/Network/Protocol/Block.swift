@@ -8,20 +8,19 @@
 
 import Foundation
 
-private let unknownHeight: UInt32 = UINT32_MAX
-
 public struct Block {
-    public let version: Int32
-    public let prevBlock: Data
-    public let merkleRoot: Data
-    public let timestamp: UInt32
-    public let bits: UInt32
-    public let nonce: UInt32
-    public let transactionCount: VarInt
-    public let transactions: [Transaction]
-    public var height: UInt32
+    static let unknownHeight: UInt32 = UINT32_MAX
+    let version: Int32
+    let prevBlock: Data
+    let merkleRoot: Data
+    let timestamp: UInt32
+    let bits: UInt32
+    let nonce: UInt32
+    let transactionCount: VarInt
+    let transactions: [Transaction]
+    var height: UInt32
 
-    public var blockHash: Data {
+    var blockHash: Data {
         var data = Data()
         data += version
         data += prevBlock
@@ -32,7 +31,7 @@ public struct Block {
         return Data(Crypto.sha256sha256(data))
     }
 
-    public func serialized() -> Data {
+    func serialized() -> Data {
         var data = Data()
         data += version
         data += prevBlock
@@ -45,12 +44,12 @@ public struct Block {
         return data
     }
 
-    public static func deserialize(_ data: Data) -> Block {
+    static func deserialize(_ data: Data) -> Block {
         let byteStream = ByteStream(data)
         return deserialize(byteStream)
     }
 
-    internal static func deserialize(_ byteStream: ByteStream) -> Block {
+    static func deserialize(_ byteStream: ByteStream) -> Block {
         let version = byteStream.read(Int32.self)
         let prevBlock = byteStream.read(Data.self, count: 32)
         let merkleRoot = byteStream.read(Data.self, count: 32)

@@ -20,6 +20,7 @@ public class PeerManager {
     let maxConnections: Int
     var peers: [Peer] = []
     var lastBlock: Block?
+    var lastCheckedBlock: Block! // have checked whether any payments exsist to this block
     var pubkeys: [PublicKey] = []
     var nextCheckpointIndex: Int = 0
     var transactions = [Data: Transaction]()
@@ -57,7 +58,7 @@ public class PeerManager {
         }
     }
 
-    func loadBloomFilter() {
+    private func loadBloomFilter() {
         let tweak = arc4random_uniform(UInt32.max)
         var bloomFilter = BloomFilter(elementCount: pubkeys.count * 2, randomNonce: tweak)
         for pubkey in pubkeys {
@@ -69,12 +70,13 @@ public class PeerManager {
         }
     }
 
-    func generateGetblock() {
-        let hash = Data(Data(hex: "0000000000290f8d9b99569c715ca46f68d408a449b3016192df0be5526bc682")!.reversed())
-        let inventory = InventoryItem(type: InventoryItem.ObjectType.filteredBlockMessage.rawValue, hash: hash)
-        for peer in peers {
-            peer.sendGetDataMessage([inventory])
+    private func sendGetBlockData(from peer: Peer) {
+        guard let lastBlockHeight = lastBlock?.height, let lastCheckedBlockHeight = lastCheckedBlock?.height, lastBlockHeight < lastCheckedBlockHeight else {
+            return
         }
+        let hashes = try! database.selectBlockHashes(from: lastCheckedBlockHeight)
+        let inventoryItems = hashes.map { InventoryItem(type: InventoryItem.ObjectType.filteredBlockMessage.rawValue, hash: $0) }
+        peer.sendGetDataMessage(inventoryItems)
     }
 
     public func send(toAddress: String, amount: UInt64) {
@@ -114,6 +116,7 @@ extension PeerManager: PeerDelegate {
             }
             if lastBlock.height >= remoteNodeHeight {
                 loadBloomFilter()
+                sendGetBlockData(from: peer)
                 return
             }
         }
@@ -133,6 +136,7 @@ extension PeerManager: PeerDelegate {
             // load bloom filter if we're done syncing
             print("sync done")
             loadBloomFilter()
+            sendGetBlockData(from: peer)
         }
         for blockHeader in blockHeaders {
             if let lastBlock = lastBlock, lastBlock.blockHash != blockHeader.prevBlock {
@@ -152,72 +156,64 @@ extension PeerManager: PeerDelegate {
                     self.nextCheckpointIndex = nextCheckpointIndex + 1
                 }
             }
-            try! database.addBlockHeader(blockHeader, hash: blockHeader.blockHash, height: blockHeight)
+            try! database.addBlockHeader(blockHeader, height: blockHeight)
             lastBlock = blockHeader
             lastBlock!.height = blockHeight
         }
     }
 
-    func peer(_ peer: Peer, didReceiveMerkleBkock merkleBlock: MerkleBlockMessage) {
-        // assume that last block is the second newest one
-        guard let lastBlock = lastBlock, lastBlock.blockHash == merkleBlock.prevBlock else {
-            peer.log(PeerLog(message: "last block hash does not match the prev block of merkle block", type: .error))
-            return
-        }
+    func peer(_ peer: Peer, didReceiveMerkleBlock merkleBlock: MerkleBlockMessage) {
         peer.context.currentMerkleBlock = merkleBlock
+        if merkleBlock.prevBlock == lastCheckedBlock.blockHash {
+            peer.context.currentMerkleBlock?.height = lastCheckedBlock.height
+        } else if let lastBlock = lastBlock, merkleBlock.prevBlock == lastBlock.blockHash {
+            peer.context.currentMerkleBlock?.height = lastBlock.height
+        }
+        peer.log(PeerLog(message: "the prev block of merkle block does not match", type: .error))
+        peer.context.currentMerkleBlock = nil
     }
 
-    func peer(didReceiveTransaction transaction: Transaction) {
-        guard let payment = convertToMyPayment(transaction) else {
-            print("transaction is irrelevant")
-            return
-        }
-        if let transactionHeight = try! database.selectTransactionBlockHeight(hash: transaction.hash) {
-            guard transactionHeight == Transaction.unconfirmed && transaction.blockHeight != Transaction.unconfirmed else {
-                print("already-known transaction. No need to update")
-                return
+    func peer(_ peer: Peer, didReceiveTransaction transaction: Transaction) {
+        let transactionHeight = peer.context.currentMerkleBlock?.height ?? Block.unknownHeight
+        // check whether tx is known or unknown
+        if let height = try! database.selectPaymentHeight(txID: transaction.txID) {
+            guard transactionHeight != height else {
+                return // exactly same tx is already in DB
             }
-            try! database.updateTransactionBlockHeight(blockHeight: transaction.blockHeight, hash: transaction.hash)
-            print("transaction updated")
+            try! database.updatePaymentHeight(txID: transaction.txID, height: transactionHeight)
+            peer.log(PeerLog(message: "payment is confirmed", type: .other))
         } else {
-            try! database.addTransaction(transaction)
+            // unknown tx
+            // check whether tx contains new utxo
+            let pubKeyHashes = pubkeys.map { $0.pubkeyHash }
+            var utxos = [UnspentTransactionOutput]()
+            for (index, txOutput) in transaction.outputs.enumerated() {
+                let lockingScript = txOutput.lockingScript
+                guard Script.isP2PKHLockingScript(lockingScript) else {
+                    continue
+                }
+                let pubkeyHash = Script.getPublicKeyHash(from: lockingScript)
+                guard pubKeyHashes.contains(pubkeyHash) else {
+                    continue
+                }
+                let utxo = UnspentTransactionOutput(hash: transaction.hash, index: UInt32(index), value: txOutput.value, lockingScript: lockingScript, pubkeyHash: pubkeyHash, lockTime: transaction.lockTime)
+                try! database.addUTXO(utxo: utxo)
+                utxos.append(utxo)
+            }
+            guard !utxos.isEmpty else {
+                return  // tx is irrelevant
+            }
+            let receiveAmount = utxos.reduce(0) { $0 + $1.value }
+            let payment = Payment(txID: transaction.txID, direction: .received, amount: receiveAmount, blockHeight: transactionHeight)
             try! database.addPayment(payment)
-            print("new transaction found")
+            peer.log(PeerLog(message: "found received tx", type: .other))
         }
-        delegate?.paymentAdded(payment)
-        let balance = try! database.calculateBalance(pubKeyHash: pubkeys[0].pubkeyHash)
-        print("balance: \(balance)")
-        delegate?.balanceChanged(balance)
     }
 
     func peer(_ peer: Peer, didReceiveGetData inventory: InventoryItem) {
         for (hash, tx) in transactions where hash == inventory.hash {
             peer.sendMessage(tx)
         }
-    }
-
-    private func convertToMyPayment(_ transaction: Transaction) -> Payment? {
-        // sum sendAmount if tx input points to UTXO
-        var sendAmount: UInt64 = 0
-        let utxos = try! database.selectUTXO(pubKeyHash: pubkeys[0].pubkeyHash)
-        for transacstionInput in transaction.inputs {
-            sendAmount = utxos
-                .filter { $0.hash == transacstionInput.previousOutput.hash }
-                .reduce(0) { $0 + $1.value }
-        }
-        // sum receiveAmount if tx output contains my pubkey hash
-        let pubKeyHashes = pubkeys.map { $0.pubkeyHash }
-        let receiveAmount: UInt64 = transaction.outputs
-            .filter { _ in true } // TODO: check whether tx is P2PKH
-            .filter { pubKeyHashes.contains(Script.getPublicKeyHash(from: $0.lockingScript)) }
-            .reduce(0) { $0 + $1.value }
-        // return nil if tx is irrelevant
-        guard sendAmount > 0 || receiveAmount > 0 else {
-            return nil
-        }
-        let amount: UInt64 = receiveAmount - sendAmount
-        let direction: Payment.Direction = amount > 0 ? .received : .sent
-        return Payment(txID: transaction.txID, direction: direction, amount: amount)
     }
 
     func peer(_ peer: Peer, logged log: PeerLog) {

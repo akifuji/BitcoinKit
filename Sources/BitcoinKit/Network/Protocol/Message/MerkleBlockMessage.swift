@@ -24,6 +24,7 @@ struct MerkleBlockMessage: Message {
     let hashes: [Data]
     let flagBytes: VarInt
     let flags: [UInt8]
+    var height: UInt32
 
     var blockHash: Data {
         var data = Data()
@@ -71,7 +72,7 @@ struct MerkleBlockMessage: Message {
         for _ in 0..<flagBytes.underlyingValue {
             flags.append(byteStream.read(UInt8.self))
         }
-        return MerkleBlockMessage(version: version, prevBlock: prevBlock, merkleRoot: merkleRoot, timestamp: timestamp, bits: bits, nonce: nonce, totalTransactions: totalTransactions, hashCount: hashCount, hashes: hashes, flagBytes: flagBytes, flags: flags)
+        return MerkleBlockMessage(version: version, prevBlock: prevBlock, merkleRoot: merkleRoot, timestamp: timestamp, bits: bits, nonce: nonce, totalTransactions: totalTransactions, hashCount: hashCount, hashes: hashes, flagBytes: flagBytes, flags: flags, height: Block.unknownHeight)
     }
 
     func isValid() -> Bool {

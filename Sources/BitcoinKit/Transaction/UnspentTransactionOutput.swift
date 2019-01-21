@@ -9,12 +9,13 @@
 import Foundation
 
 // UnspentTransactionOutput is used for building a new transaction
-struct UnspentTransactionOutput {
+public struct UnspentTransactionOutput {
     let hash: Data
     let index: UInt32
     let value: UInt64
     let lockingScript: Data
     let pubkeyHash: Data
+    let lockTime: UInt32
 }
 
 extension Sequence where Element == UnspentTransactionOutput {

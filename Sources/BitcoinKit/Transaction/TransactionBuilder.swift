@@ -50,7 +50,7 @@ class TransactionBuilder {
             let pubkey = key.publicKey
             // Create unlocking Script
             let sigWithHashType: Data = signature + UInt8(0x01)
-            let unlockingScipt = Data(bytes: [UInt8(sigWithHashType.count)]) + sigWithHashType + Data(bytes: [UInt8(pubkey.data.count)]) + pubkey.data
+            let unlockingScipt = Data([UInt8(sigWithHashType.count)]) + sigWithHashType + Data([UInt8(pubkey.data.count)]) + pubkey.data
             let txInput = signingInputs[inputIndex]
             signingInputs[inputIndex] = TransactionInput(previousOutput: txInput.previousOutput, signatureScript: unlockingScipt, sequence: txInput.sequence)
         }

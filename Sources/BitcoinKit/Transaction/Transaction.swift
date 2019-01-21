@@ -9,7 +9,6 @@
 import Foundation
 
 public struct Transaction: Message {
-    static let unconfirmed = UINT32_MAX
     static var command: String {
         return "tx"
     }
@@ -30,9 +29,9 @@ public struct Transaction: Message {
     public var txID: Data {
         return Data(hash.reversed())
     }
-    var blockHeight: UInt32 = unconfirmed
+    var blockHeight: UInt32
 
-    init(version: UInt32, inputs: [TransactionInput], outputs: [TransactionOutput], lockTime: UInt32, blockHeight: UInt32 = unconfirmed) {
+    init(version: UInt32, inputs: [TransactionInput], outputs: [TransactionOutput], lockTime: UInt32, blockHeight: UInt32 = Block.unknownHeight) {
         self.version = version
         self.inputs = inputs
         self.outputs = outputs
@@ -69,6 +68,6 @@ public struct Transaction: Message {
             outputs.append(TransactionOutput.deserialize(byteStream))
         }
         let lockTime = byteStream.read(UInt32.self)
-        return Transaction(version: version, inputs: inputs, outputs: outputs, lockTime: lockTime, blockHeight: unconfirmed)
+        return Transaction(version: version, inputs: inputs, outputs: outputs, lockTime: lockTime)
     }
 }

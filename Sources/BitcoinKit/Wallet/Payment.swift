@@ -18,7 +18,7 @@ public struct Payment {
     public let amount: UInt64
     public var blockHeight: UInt32
 
-    init(txID: Data, direction: Direction, amount: UInt64, blockHeight: UInt32 = Transaction.unconfirmed) {
+    init(txID: Data, direction: Direction, amount: UInt64, blockHeight: UInt32 = Block.unknownHeight) {
         self.txID = txID
         self.direction = direction
         self.amount = amount

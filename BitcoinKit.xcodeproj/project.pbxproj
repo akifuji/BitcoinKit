@@ -52,7 +52,7 @@
 		0CC4681021E2ED3E007828F3 /* GetHeadersMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC4680F21E2ED3E007828F3 /* GetHeadersMessage.swift */; };
 		0CC4681221E2F100007828F3 /* HeadersMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC4681121E2F100007828F3 /* HeadersMessage.swift */; };
 		0CC4681421E2F2C6007828F3 /* Block.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC4681321E2F2C6007828F3 /* Block.swift */; };
-		0CC4681721E34116007828F3 /* Database.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC4681621E34116007828F3 /* Database.swift */; };
+		0CC4681721E34116007828F3 /* SQLiteDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC4681621E34116007828F3 /* SQLiteDatabase.swift */; };
 		0CC4681B21E42BFD007828F3 /* PeerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC4681A21E42BFD007828F3 /* PeerManager.swift */; };
 		0CC4681F21E4A086007828F3 /* Transaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC4681E21E4A086007828F3 /* Transaction.swift */; };
 		0CC4682121E4A1AA007828F3 /* TransactionInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC4682021E4A1AA007828F3 /* TransactionInput.swift */; };
@@ -126,7 +126,7 @@
 		0CC4680F21E2ED3E007828F3 /* GetHeadersMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetHeadersMessage.swift; sourceTree = "<group>"; };
 		0CC4681121E2F100007828F3 /* HeadersMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadersMessage.swift; sourceTree = "<group>"; };
 		0CC4681321E2F2C6007828F3 /* Block.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Block.swift; sourceTree = "<group>"; };
-		0CC4681621E34116007828F3 /* Database.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Database.swift; sourceTree = "<group>"; };
+		0CC4681621E34116007828F3 /* SQLiteDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteDatabase.swift; sourceTree = "<group>"; };
 		0CC4681A21E42BFD007828F3 /* PeerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerManager.swift; sourceTree = "<group>"; };
 		0CC4681E21E4A086007828F3 /* Transaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transaction.swift; sourceTree = "<group>"; };
 		0CC4682021E4A1AA007828F3 /* TransactionInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionInput.swift; sourceTree = "<group>"; };
@@ -295,7 +295,7 @@
 		0CC4681C21E42C2D007828F3 /* Wallet */ = {
 			isa = PBXGroup;
 			children = (
-				0CC4681621E34116007828F3 /* Database.swift */,
+				0CC4681621E34116007828F3 /* SQLiteDatabase.swift */,
 				0C4FDFDF21F2B3C200BC27B9 /* Payment.swift */,
 			);
 			path = Wallet;
@@ -547,7 +547,7 @@
 				1419E83B202CDBE500FCB0BE /* BitcoinKitPrivate.m in Sources */,
 				0CC4682F21E587A4007828F3 /* InventoryItem.swift in Sources */,
 				0CC467C021DDD5B0007828F3 /* Data+Extension.swift in Sources */,
-				0CC4681721E34116007828F3 /* Database.swift in Sources */,
+				0CC4681721E34116007828F3 /* SQLiteDatabase.swift in Sources */,
 				0CC4682721E56F40007828F3 /* BloomFilter.swift in Sources */,
 				0C4FDFC821E85E8A00BC27B9 /* InventoryMessage.swift in Sources */,
 				0C4FDFE021F2B3C200BC27B9 /* Payment.swift in Sources */,

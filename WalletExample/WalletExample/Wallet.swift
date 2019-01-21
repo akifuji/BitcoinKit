@@ -24,7 +24,7 @@ class Wallet: PeerManagerDelegate {
     
     private init() {
         self.privateKey = try! PrivateKey.init(wif: "cQ2BQqKL44d9az7JuUx8b1CSGx5LkQrTM7UQKjYGnrHiMX5nUn5C")
-        let database = try! Database.default()
+        let database = try! SQLiteDatabase.default()
         peerManager = PeerManager(database: database, pubkeys: [publicKey])
         peerManager.delegate = self
         peerManager.start()
