@@ -38,7 +38,8 @@ class Wallet: PeerManagerDelegate {
         let database = try! SQLiteDatabase.default()
         balance = try! database.calculateBalance(pubKeyHash: privateKey.publicKey.pubkeyHash)
         payments = try! database.payments()
-        peerManager = PeerManager(database: database, pubkeys: [publicKey], lastCheckedBlockHeight: 1414448)
+        print("lastCheckedBlockHeight \(lastCheckedBlockHeight)")
+        peerManager = PeerManager(database: database, pubkeys: [publicKey], lastCheckedBlockHeight: lastCheckedBlockHeight)
         peerManager.delegate = self
         peerManager.start()
     }

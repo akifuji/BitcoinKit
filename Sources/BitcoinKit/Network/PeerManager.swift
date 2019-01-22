@@ -79,8 +79,7 @@ public class PeerManager {
         guard let lastBlockHeight = lastBlock?.height, let lastCheckedBlockHeight = lastCheckedBlockHeight, lastCheckedBlockHeight < lastBlockHeight else {
             return
         }
-//        let hashes = try! database.selectBlockHashes(from: lastCheckedBlockHeight)
-        let hashes = [Data(Data(hex: "000000000000000ead1f0881be8afd9c814c0bc52774bf9ee9ec1c204fba9c3d")!.reversed())]
+        let hashes = try! database.selectBlockHashes(from: lastCheckedBlockHeight)
         let inventoryItems: [InventoryItem] = hashes.map { InventoryItem(type: InventoryItem.ObjectType.filteredBlockMessage.rawValue, hash: $0) }
         if inventoryItems.count <= GetDataMessage.maximumEntries {
             peer.sendGetDataMessage(inventoryItems)
@@ -202,7 +201,12 @@ extension PeerManager: PeerDelegate {
         guard let merkleBlockHeight = peer.context.currentMerkleBlock?.height else {
             return
         }
-        // check whether tx contains new utxo
+        var isMyTransaction = false
+        // check whether tx contains my utxos
+        for input in transaction.inputs where try! database.deleteUTXO(pubkeyHash: input.previousOutput.hash) {
+            isMyTransaction = true
+        }
+        // check whether tx contains new utxos
         var utxos = [UnspentTransactionOutput]()
         for (index, txOutput) in transaction.outputs.enumerated() {
             let lockingScript = txOutput.lockingScript
@@ -216,8 +220,9 @@ extension PeerManager: PeerDelegate {
             let utxo = UnspentTransactionOutput(hash: transaction.hash, index: UInt32(index), value: txOutput.value, lockingScript: lockingScript, pubkeyHash: pubkeyHash, lockTime: transaction.lockTime)
             try! database.addUTXO(utxo: utxo, height: merkleBlockHeight)
             utxos.append(utxo)
+            isMyTransaction = true
         }
-        guard !utxos.isEmpty else {
+        guard isMyTransaction else {
             return  // tx is irrelevant
         }
         // check whether tx is known or unknown

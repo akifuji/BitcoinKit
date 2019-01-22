@@ -26,7 +26,7 @@ public protocol Database {
     func unspentTransactionOutputs() throws -> [UnspentTransactionOutput]
     func selectUTXO(pubKeyHash: Data) throws -> [UnspentTransactionOutput]
     func calculateBalance(pubKeyHash: Data) throws -> UInt64
-    func deleteUTXO(pubkeyHash: Data, height: UInt32) throws
+    func deleteUTXO(pubkeyHash: Data) throws -> Bool
     // Payment
     func addPayment(_ payment: Payment) throws
     func payments() throws -> [Payment]
@@ -184,7 +184,7 @@ public class SQLiteDatabase: Database {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
                                              """
-                                             DELETE FROM utxos WHERE pubkey_hash == ? AND height < ?;
+                                             DELETE FROM utxos WHERE pubkey_hash == ?;
                                              """,
                                              -1,
                                              &statement,
@@ -335,8 +335,6 @@ public class SQLiteDatabase: Database {
 
         try executeUpdate { sqlite3_step(statement) }
         try execute { sqlite3_reset(statement) }
-
-        try deleteUTXO(pubkeyHash: pubkeyHash, height: height)
     }
 
     public func unspentTransactionOutputs() throws -> [UnspentTransactionOutput] {
@@ -384,12 +382,12 @@ public class SQLiteDatabase: Database {
         return balance
     }
 
-    public func deleteUTXO(pubkeyHash: Data, height: UInt32) throws {
+    public func deleteUTXO(pubkeyHash: Data) throws -> Bool {
         let statement = statements["deleteUTXO"]
         try execute { pubkeyHash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(pubkeyHash.count), SQLITE_TRANSIENT) } }
-        try execute { sqlite3_bind_int64(statement, 2, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: height))) }
-        try executeUpdate { sqlite3_step(statement) }
+        let hasDeleted = sqlite3_step(statement) == SQLITE_ROW
         try execute { sqlite3_reset(statement) }
+        return hasDeleted
     }
 
     // MARK: Payment
