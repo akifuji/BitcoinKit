@@ -31,7 +31,6 @@
 		0CC467C321DDDDE6007828F3 /* Crypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC467C221DDDDE6007828F3 /* Crypto.swift */; };
 		0CC467CC21DEE5AD007828F3 /* PublicKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC467CB21DEE5AD007828F3 /* PublicKey.swift */; };
 		0CC467D221DF034D007828F3 /* Bech32.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC467D121DF034D007828F3 /* Bech32.swift */; };
-		0CC467D621DF4FFD007828F3 /* Address.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC467D521DF4FFD007828F3 /* Address.swift */; };
 		0CC467DA21DF8121007828F3 /* Peer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC467D921DF8121007828F3 /* Peer.swift */; };
 		0CC467DF21E02D8F007828F3 /* MessageHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC467DE21E02D8F007828F3 /* MessageHeader.swift */; };
 		0CC467E121E02FFC007828F3 /* VarInt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC467E021E02FFC007828F3 /* VarInt.swift */; };
@@ -104,7 +103,6 @@
 		0CC467C221DDDDE6007828F3 /* Crypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Crypto.swift; sourceTree = "<group>"; };
 		0CC467CB21DEE5AD007828F3 /* PublicKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKey.swift; sourceTree = "<group>"; };
 		0CC467D121DF034D007828F3 /* Bech32.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bech32.swift; sourceTree = "<group>"; };
-		0CC467D521DF4FFD007828F3 /* Address.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Address.swift; sourceTree = "<group>"; };
 		0CC467D921DF8121007828F3 /* Peer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Peer.swift; sourceTree = "<group>"; };
 		0CC467DE21E02D8F007828F3 /* MessageHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageHeader.swift; sourceTree = "<group>"; };
 		0CC467E021E02FFC007828F3 /* VarInt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VarInt.swift; sourceTree = "<group>"; };
@@ -189,7 +187,6 @@
 			children = (
 				0CC467B021DD847B007828F3 /* PrivateKey.swift */,
 				0CC467CB21DEE5AD007828F3 /* PublicKey.swift */,
-				0CC467D521DF4FFD007828F3 /* Address.swift */,
 				0CC4681E21E4A086007828F3 /* Transaction.swift */,
 				0CC4682021E4A1AA007828F3 /* TransactionInput.swift */,
 				0CC4682221E4A1DA007828F3 /* TransactionOutPoint.swift */,
@@ -526,7 +523,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				0CC467E121E02FFC007828F3 /* VarInt.swift in Sources */,
-				0CC467D621DF4FFD007828F3 /* Address.swift in Sources */,
 				0CC467CC21DEE5AD007828F3 /* PublicKey.swift in Sources */,
 				0CC4683121E58A17007828F3 /* MerkleBlockMessage.swift in Sources */,
 				0CC4682921E572A7007828F3 /* MurmurHash.swift in Sources */,
