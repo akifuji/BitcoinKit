@@ -81,9 +81,10 @@ public class PeerManager {
         let inventoryItems: [InventoryItem] = hashes.map { InventoryItem(type: InventoryItem.ObjectType.filteredBlockMessage.rawValue, hash: $0) }
         if inventoryItems.count <= GetDataMessage.maximumEntries {
             peer.sendGetDataMessage(inventoryItems)
+            self.lastCheckedBlockHeight = lastBlockHeight
+            delegate?.lastCheckedBlockHeightUpdated(lastBlockHeight)
         }
-        self.lastCheckedBlockHeight = lastBlockHeight
-        delegate?.lastCheckedBlockHeightUpdated(lastBlockHeight)
+        // TODO: handle the case where inventoryItems.count > GetDataMessage.maximumEntries
     }
 
     public func send(toAddress: String, amount: UInt64) {
@@ -187,13 +188,15 @@ extension PeerManager: PeerDelegate {
     }
 
     func peer(_ peer: Peer, didReceiveTransaction transaction: Transaction) {
-        let transactionHeight = peer.context.currentMerkleBlock?.height ?? Block.unknownHeight
+        guard let merkleBlockHeight = peer.context.currentMerkleBlock?.height else {
+            return
+        }
         // check whether tx is known or unknown
         if let height = try! database.selectPaymentHeight(txID: transaction.txID) {
-            guard transactionHeight != height else {
+            guard merkleBlockHeight != height else {
                 return // exactly same tx is already in DB
             }
-            try! database.updatePaymentHeight(txID: transaction.txID, height: transactionHeight)
+            try! database.updatePaymentHeight(txID: transaction.txID, height: merkleBlockHeight)
             peer.log(PeerLog(message: "payment is confirmed", type: .other))
         } else {
             // unknown tx
@@ -210,14 +213,14 @@ extension PeerManager: PeerDelegate {
                     continue
                 }
                 let utxo = UnspentTransactionOutput(hash: transaction.hash, index: UInt32(index), value: txOutput.value, lockingScript: lockingScript, pubkeyHash: pubkeyHash, lockTime: transaction.lockTime)
-                try! database.addUTXO(utxo: utxo)
+                try! database.addUTXO(utxo: utxo, height: merkleBlockHeight)
                 utxos.append(utxo)
             }
             guard !utxos.isEmpty else {
                 return  // tx is irrelevant
             }
             let receiveAmount = utxos.reduce(0) { $0 + $1.value }
-            let payment = Payment(txID: transaction.txID, direction: .received, amount: receiveAmount, blockHeight: transactionHeight)
+            let payment = Payment(txID: transaction.txID, direction: .received, amount: receiveAmount, blockHeight: merkleBlockHeight)
             try! database.addPayment(payment)
             peer.log(PeerLog(message: "found received tx", type: .other))
         }

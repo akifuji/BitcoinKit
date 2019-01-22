@@ -22,10 +22,11 @@ public protocol Database {
     func selectBlockHeight(hash: Data) throws -> UInt32?
     func selectBlockHashes(from height: UInt32) throws -> [Data]   // get block hashes to latest block
     // UTXO
-    func addUTXO(utxo: UnspentTransactionOutput) throws
+    func addUTXO(utxo: UnspentTransactionOutput, height: UInt32) throws
     func unspentTransactionOutputs() throws -> [UnspentTransactionOutput]
     func selectUTXO(pubKeyHash: Data) throws -> [UnspentTransactionOutput]
     func calculateBalance(pubKeyHash: Data) throws -> UInt64
+    func deleteUTXO(pubkeyHash: Data, height: UInt32) throws
     // Payment
     func addPayment(_ payment: Payment) throws
     func payments() throws -> [Payment]
@@ -59,6 +60,7 @@ public class SQLiteDatabase: Database {
                                     );
                                     CREATE TABLE IF NOT EXISTS utxos (
                                         id BLOB NOT NULL PRIMARY KEY,
+                                        height INTEGER NOT NULL,
                                         out_index INTEGER NOT NULL,
                                         value INTEGER NOT NULL,
                                         locking_script BLOB NOT NULL,
@@ -132,9 +134,9 @@ public class SQLiteDatabase: Database {
             try execute { sqlite3_prepare_v2(database,
                                              """
                                              REPLACE INTO utxos
-                                                (id, out_index, value, locking_script, pubkey_hash, lock_time)
+                                                (id, height, out_index, value, locking_script, pubkey_hash, lock_time)
                                                 VALUES
-                                                (?,    ?,     ?,          ?,            ?,          ?);
+                                                (?,      ?,         ?,       ?,          ?,            ?,          ?);
                                              """,
                                              -1,
                                              &statement,
@@ -178,6 +180,18 @@ public class SQLiteDatabase: Database {
             }
             return statement
             }()
+        statements["deleteUTXO"] = try {
+            var statement: OpaquePointer?
+            try execute { sqlite3_prepare_v2(database,
+                                             """
+                                             DELETE FROM utxos WHERE pubkey_hash == ? AND height < ?;
+                                             """,
+                                             -1,
+                                             &statement,
+                                             nil)
+            }
+            return statement
+        }()
         statements["addPayment"] = try {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
@@ -284,7 +298,7 @@ public class SQLiteDatabase: Database {
         try execute { hash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(hash.count), SQLITE_TRANSIENT) } }
         var height: UInt32?
         if sqlite3_step(statement) == SQLITE_ROW {
-            height = UInt32(sqlite3_column_int64(statement, 1))
+            height = UInt32(sqlite3_column_int64(statement, 0))
         }
         try execute { sqlite3_reset(statement) }
         return height
@@ -306,20 +320,23 @@ public class SQLiteDatabase: Database {
 
     // MARK: UTXO
 
-    public func addUTXO(utxo: UnspentTransactionOutput) throws {
+    public func addUTXO(utxo: UnspentTransactionOutput, height: UInt32) throws {
         let statement = statements["addUTXO"]
         let hash = utxo.hash
         try execute { hash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(hash.count), SQLITE_TRANSIENT) } }
-        try execute { sqlite3_bind_int64(statement, 2, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: utxo.index))) }
-        try execute { sqlite3_bind_int64(statement, 3, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: utxo.value))) }
+        try execute { sqlite3_bind_int64(statement, 2, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: height))) }
+        try execute { sqlite3_bind_int64(statement, 3, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: utxo.index))) }
+        try execute { sqlite3_bind_int64(statement, 4, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: utxo.value))) }
         let lockingScript = utxo.lockingScript
-        try execute { lockingScript.withUnsafeBytes { sqlite3_bind_blob(statement, 4, $0, Int32(lockingScript.count), SQLITE_TRANSIENT) } }
+        try execute { lockingScript.withUnsafeBytes { sqlite3_bind_blob(statement, 5, $0, Int32(lockingScript.count), SQLITE_TRANSIENT) } }
         let pubkeyHash = utxo.pubkeyHash
-        try execute { pubkeyHash.withUnsafeBytes { sqlite3_bind_blob(statement, 5, $0, Int32(pubkeyHash.count), SQLITE_TRANSIENT) } }
-        try execute { sqlite3_bind_int64(statement, 6, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: utxo.lockTime))) }
+        try execute { pubkeyHash.withUnsafeBytes { sqlite3_bind_blob(statement, 6, $0, Int32(pubkeyHash.count), SQLITE_TRANSIENT) } }
+        try execute { sqlite3_bind_int64(statement, 7, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: utxo.lockTime))) }
 
         try executeUpdate { sqlite3_step(statement) }
         try execute { sqlite3_reset(statement) }
+
+        try deleteUTXO(pubkeyHash: pubkeyHash, height: height)
     }
 
     public func unspentTransactionOutputs() throws -> [UnspentTransactionOutput] {
@@ -365,6 +382,14 @@ public class SQLiteDatabase: Database {
         }
         try execute { sqlite3_reset(statement) }
         return balance
+    }
+
+    public func deleteUTXO(pubkeyHash: Data, height: UInt32) throws {
+        let statement = statements["deleteUTXO"]
+        try execute { pubkeyHash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(pubkeyHash.count), SQLITE_TRANSIENT) } }
+        try execute { sqlite3_bind_int64(statement, 2, sqlite3_int64(bitPattern: UInt64(truncatingIfNeeded: height))) }
+        try executeUpdate { sqlite3_step(statement) }
+        try execute { sqlite3_reset(statement) }
     }
 
     // MARK: Payment

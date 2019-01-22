@@ -39,7 +39,6 @@ class Peer: NSObject {
         var sentVerack = false
         var sentFilter = false
         var currentMerkleBlock: MerkleBlockMessage?
-        var currentGotTxNumber: UInt32 = 0  // the number of gotten tx following a merkle block
         var remoteNodeHeight: Int32 = -1
     }
     weak var delegate: PeerDelegate?
@@ -120,10 +119,8 @@ class Peer: NSObject {
     // swiftlint:disable:next cyclomatic_complexity
     private func isSucceeededHandle(command: String, payload: Data) -> Bool {
         // if we receive a non-tx message, merkleblock is done
-        if command != Transaction.command, let merkleBlock = context.currentMerkleBlock {
-            log(PeerLog(message: "incomplete merkleblock, expected \(merkleBlock.totalTransactions) txs, but got only \(context.currentGotTxNumber)", type: .error))
+        if context.currentMerkleBlock != nil && command != Transaction.command {
             context.currentMerkleBlock = nil
-            context.currentGotTxNumber = 0
         }
         do {
             switch command {
@@ -272,19 +269,7 @@ class Peer: NSObject {
             log(PeerLog(message: "got tx message before loading filter", type: .error))
             return
         }
-        log(PeerLog(message: "got tx \(payload.hex)", type: .from))
-        if let merkleBlock = context.currentMerkleBlock {
-            guard merkleBlock.hashes.contains(tx.hash) else {
-                log(PeerLog(message: "tx hash is out of merkle block hashes", type: .error))
-                return
-            }
-            context.currentGotTxNumber += 1
-            if context.currentGotTxNumber == merkleBlock.totalTransactions {
-                log(PeerLog(message: "txs following a merkle block has completed", type: .other))
-                context.currentMerkleBlock = nil
-                context.currentGotTxNumber = 0
-            }
-        }
+        log(PeerLog(message: "got tx, ID: \(tx.txID)", type: .from))
         delegate?.peer(self, didReceiveTransaction: tx)
     }
 
