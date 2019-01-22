@@ -37,22 +37,32 @@ class WalletViewController: UIViewController, UITableViewDelegate, UITableViewDa
         super.viewDidLoad()
         txTableView.delegate = self
         txTableView.dataSource = self
-        
         NotificationCenter.default.addObserver(self, selector: #selector(balanceChanged(notification:)), name: Notification.Name.Wallet.balanceChanged, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(paymentAdded(notification:)), name: Notification.Name.Wallet.paymentAdded, object: nil)
     }
     
     override func viewWillAppear(_ animated: Bool) {
-        qrCodeImageView.image = generateVisualCode(address: wallet.publicKey.base58Address)
+        updateBalance()
+        let address: String = wallet.publicKey.base58Address
+        qrCodeImageView.image = generateVisualCode(address: address)
+        addressLabel.text = "address: \(address)"
+    }
+    
+    @IBAction func didTapQRCodeButton(_ sender: Any) {
+        UIPasteboard.general.string = wallet.publicKey.base58Address
     }
     
     @IBAction func didTapSendButton(_ sender: UIButton) {
         wallet.peerManager.send(toAddress: "mjPAZNeeSid5F9BKt6hYKgfRWrADDtgCVp", amount: 5000)
     }
     
+    private func updateBalance() {
+        balanceLabel.text = "Balance: \(wallet.balance)"
+    }
+    
     @objc
     func balanceChanged(notification: Notification) {
-        balanceLabel.text = "Balance: \(wallet.balance)"
+        updateBalance()
     }
     
     @objc

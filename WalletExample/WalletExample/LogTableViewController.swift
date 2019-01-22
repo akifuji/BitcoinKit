@@ -8,35 +8,47 @@
 
 import UIKit
 
-class LogTableViewController: UITableViewController {
+class LogViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     
-    @IBOutlet weak var navigationBar: UINavigationBar!
+    @IBOutlet weak var tableView: UITableView!
+    @IBOutlet weak var blockHeightTextField: UITextField!
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        tableView.delegate = self
+        tableView.dataSource = self
         NotificationCenter.default.addObserver(self, selector: #selector(logged(notification:)), name: Notification.Name.Wallet.logged, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(lastBlockChanged(notification:)), name: Notification.Name.Wallet.lastBlockChanged, object: nil)
+        updateBlockHeight()
     }
     
-    override func viewWillAppear(_ animated: Bool) {
-        navigationBar.topItem?.title = "Log History"
+    private func updateBlockHeight() {
+        blockHeightTextField.text = "Block Height: \(Wallet.shared.lastCheckedBlockHeight)"
+    }
+    
+    @objc
+    func lastBlockChanged(notification: Notification) {
+        updateBlockHeight()
     }
     
     @objc
     func logged(notification: Notification) {
         tableView.reloadData()
-        let indexPath = IndexPath(item: 0, section: 0)
-        self.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
+        DispatchQueue.main.async {
+            let indexPath = IndexPath(item: Wallet.shared.logs.count-1, section: 0)
+            self.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
+        }
     }
 
-    override func numberOfSections(in tableView: UITableView) -> Int {
+    func numberOfSections(in tableView: UITableView) -> Int {
         return 1
     }
 
-    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return Wallet.shared.logs.count
     }
 
-    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "logCell", for: indexPath)
         let log = Wallet.shared.logs[indexPath.row]
         cell.textLabel?.text = log.message

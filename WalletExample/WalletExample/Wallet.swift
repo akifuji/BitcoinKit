@@ -61,7 +61,7 @@ class Wallet: PeerManagerDelegate {
     
     func lastCheckedBlockHeightUpdated(_ height: UInt32) {
         lastCheckedBlockHeight = height
-        print("set new lastCheckedBlockHeight: \(lastCheckedBlockHeight)")
+        NotificationCenter.default.post(name: Notification.Name.Wallet.lastBlockChanged, object: self)
     }
 }
 
@@ -70,5 +70,6 @@ extension Notification.Name {
         static let balanceChanged = Notification.Name("Wallet.balanceChanged")
         static let paymentAdded = Notification.Name("Wallet.paymentAdded")
         static let logged = Notification.Name("Wallet.logged")
+        static let lastBlockChanged = Notification.Name("Wallet.lastBlockChanged")
     }
 }
