@@ -160,7 +160,7 @@ public class SQLiteDatabase: Database {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
                                              """
-                                             SELECT value FROM utxos;
+                                             SELECT value FROM utxos where pubkey_hash = ?;
                                              """,
                                              -1,
                                              &statement,
@@ -362,11 +362,11 @@ public class SQLiteDatabase: Database {
         var utxos = [UnspentTransactionOutput]()
         while sqlite3_step(statement) == SQLITE_ROW {
             let hash = Data(bytes: sqlite3_column_blob(statement, 0)!, count: 32)
-            let index = UInt32(sqlite3_column_int64(statement, 1))
-            let value = UInt64(sqlite3_column_int64(statement, 2))
-            let scriptLength = Int(sqlite3_column_bytes(statement, 3))
-            let script = Data(bytes: sqlite3_column_blob(statement, 3)!, count: scriptLength)
-            let lockTime = UInt32(sqlite3_column_int64(statement, 4))
+            let index = UInt32(sqlite3_column_int64(statement, 2))
+            let value = UInt64(sqlite3_column_int64(statement, 3))
+            let scriptLength = Int(sqlite3_column_bytes(statement, 4))
+            let script = Data(bytes: sqlite3_column_blob(statement, 4)!, count: scriptLength)
+            let lockTime = UInt32(sqlite3_column_int64(statement, 5))
             utxos.append(UnspentTransactionOutput(hash: hash, index: index, value: value, lockingScript: script, pubkeyHash: pubKeyHash, lockTime: lockTime))
         }
         try execute { sqlite3_reset(statement) }

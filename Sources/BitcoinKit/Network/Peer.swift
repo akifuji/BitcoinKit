@@ -269,7 +269,7 @@ class Peer: NSObject {
             log(PeerLog(message: "got tx message before loading filter", type: .error))
             return
         }
-        log(PeerLog(message: "got tx, ID: \(tx.txID)", type: .from))
+        log(PeerLog(message: "got tx (ID: \(tx.txID.hex))", type: .from))
         delegate?.peer(self, didReceiveTransaction: tx)
     }
 

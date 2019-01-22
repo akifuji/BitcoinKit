@@ -17,15 +17,11 @@ class TransactionBuilder {
         self.dustThreshhold = dustThreshhold
     }
 
-    func buildTransaction(toAddress: String, changeAddress: String, amount: UInt64, utxos: [UnspentTransactionOutput], keys: [PrivateKey]) throws -> Transaction {
+    func buildTransaction(destinations: [(String, UInt64)], utxos: [UnspentTransactionOutput], keys: [PrivateKey]) throws -> Transaction {
         // Create outputs
-        let (utxosToSpend, fee) = try selectUTXOs(from: utxos, targetValue: amount)
-        let totalAmount: UInt64 = utxosToSpend.sum()
-        let change: UInt64 = totalAmount - amount - fee
-        let destinations: [(String, UInt64)] = [(toAddress, amount), (changeAddress, change)]
         let outputs = destinations.map { (address: String, amount: UInt64) -> TransactionOutput in
             let decoded = Base58.decode(address)
-            let pubkeyHash = decoded!.dropLast(4)
+            let pubkeyHash = decoded!.dropFirst().dropLast(4)
             let lockingScript = Script.buildP2PKHLockingScript(pubKeyHash: pubkeyHash)
             return TransactionOutput(value: amount, lockingScript: lockingScript)
         }
@@ -33,7 +29,7 @@ class TransactionBuilder {
         var signingInputs = utxos.map { TransactionInput(previousOutput: TransactionOutPoint(hash: $0.hash, index: $0.index), signatureScript: Data(), sequence: UInt32.max)
         }
         // Create signature and sign tx
-        for (inputIndex, utxo) in utxosToSpend.enumerated() {
+        for (inputIndex, utxo) in utxos.enumerated() {
             let keysOfUtxo: [PrivateKey] = keys.filter { $0.publicKey.pubkeyHash == utxo.pubkeyHash }
             guard let key = keysOfUtxo.first else {
                 throw TransactionBuilderError.error("key is missing")
@@ -57,7 +53,7 @@ class TransactionBuilder {
         return Transaction(version: 1, inputs: signingInputs, outputs: outputs, lockTime: 0)
     }
 
-    private func selectUTXOs(from utxos: [UnspentTransactionOutput], targetValue: UInt64) throws -> (utxos: [UnspentTransactionOutput], fee: UInt64) {
+    func selectUTXOs(from utxos: [UnspentTransactionOutput], targetValue: UInt64) throws -> (utxos: [UnspentTransactionOutput], fee: UInt64) {
         // if target value is zero, fee is zero
         guard targetValue > 0 else {
             return ([], 0)

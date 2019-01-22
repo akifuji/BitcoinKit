@@ -24,10 +24,8 @@ class LogTableViewController: UITableViewController {
     @objc
     func logged(notification: Notification) {
         tableView.reloadData()
-        DispatchQueue.main.async {
-            let indexPath = IndexPath(item: 0, section: 0)
-            self.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
-        }
+        let indexPath = IndexPath(item: 0, section: 0)
+        self.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
     }
 
     override func numberOfSections(in tableView: UITableView) -> Int {

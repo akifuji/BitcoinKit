@@ -23,8 +23,11 @@ public class PeerManager {
     var lastBlock: Block?
     var lastCheckedBlockHeight: UInt32? // have checked whether any payments exsist to this block
     var pubkeys = [PublicKey]()
+    var pubkeyHashes: [Data] {
+        return pubkeys.map { $0.pubkeyHash }
+    }
     var nextCheckpointIndex: Int = 0
-    var transactions = [Data: Transaction]()
+    var txsToBroadcast = [(tx: Transaction, sendAmount: UInt64)]() // save txs to broadcast till getting GetDataMessage from remote node
 
     public weak var delegate: PeerManagerDelegate?
 
@@ -76,18 +79,17 @@ public class PeerManager {
         guard let lastBlockHeight = lastBlock?.height, let lastCheckedBlockHeight = lastCheckedBlockHeight, lastCheckedBlockHeight < lastBlockHeight else {
             return
         }
-        print("\(lastCheckedBlockHeight)")
-        let hashes = try! database.selectBlockHashes(from: lastCheckedBlockHeight)
+//        let hashes = try! database.selectBlockHashes(from: lastCheckedBlockHeight)
+        let hashes = [Data(Data(hex: "000000000000000ead1f0881be8afd9c814c0bc52774bf9ee9ec1c204fba9c3d")!.reversed())]
         let inventoryItems: [InventoryItem] = hashes.map { InventoryItem(type: InventoryItem.ObjectType.filteredBlockMessage.rawValue, hash: $0) }
         if inventoryItems.count <= GetDataMessage.maximumEntries {
             peer.sendGetDataMessage(inventoryItems)
-            self.lastCheckedBlockHeight = lastBlockHeight
-            delegate?.lastCheckedBlockHeightUpdated(lastBlockHeight)
-        }
-        let maxIndex: Int = inventoryItems.count / GetDataMessage.maximumEntries
-        for index in 0...maxIndex {
-            let end = index == maxIndex ? inventoryItems.count : (index + 1) * GetDataMessage.maximumEntries
-            peer.sendGetDataMessage(Array(inventoryItems[index * GetDataMessage.maximumEntries..<end]))
+        } else {
+            let maxIndex: Int = inventoryItems.count / GetDataMessage.maximumEntries
+            for index in 0...maxIndex {
+                let end = index == maxIndex ? inventoryItems.count : (index + 1) * GetDataMessage.maximumEntries
+                peer.sendGetDataMessage(Array(inventoryItems[index * GetDataMessage.maximumEntries..<end]))
+            }
         }
         self.lastCheckedBlockHeight = lastBlockHeight
         delegate?.lastCheckedBlockHeightUpdated(lastBlockHeight)
@@ -95,20 +97,23 @@ public class PeerManager {
 
     public func send(toAddress: String, amount: UInt64) {
         let txBuilder = TransactionBuilder()
-        let pubkey = pubkeys[0]
-        let utxos = try! database.selectUTXO(pubKeyHash: pubkey.pubkeyHash)
-        let utxo = utxos.filter { $0.pubkeyHash == pubkeys[0].pubkeyHash }
+        let utxos: [UnspentTransactionOutput] = pubkeyHashes
+            .map { try! database.selectUTXO(pubKeyHash: $0) }
+            .flatMap { $0 }
         var transaction: Transaction!
         do {
-            transaction = try txBuilder.buildTransaction(toAddress: toAddress, changeAddress: pubkey.base58Address, amount: amount, utxos: utxo, keys: [try! PrivateKey(wif: "cQ2BQqKL44d9az7JuUx8b1CSGx5LkQrTM7UQKjYGnrHiMX5nUn5C")])
+            let (utxosToSpend, fee) = try txBuilder.selectUTXOs(from: utxos, targetValue: amount)
+            let totalAmount: UInt64 = utxosToSpend.sum()
+            let change: UInt64 = totalAmount - amount - fee
+            let destinations: [(String, UInt64)] = [(toAddress, amount), (pubkeys[0].base58Address, change)]
+            transaction = try txBuilder.buildTransaction(destinations: destinations, utxos: utxos, keys: [try! PrivateKey(wif: "cQ2BQqKL44d9az7JuUx8b1CSGx5LkQrTM7UQKjYGnrHiMX5nUn5C")])
         } catch TransactionBuilderError.error(let message) {
             print("failt to build tx: \(message)")
         } catch let error {
             print(error.localizedDescription)
         }
-        transactions[transaction.txID] = transaction
+        txsToBroadcast.append((tx: transaction, sendAmount: amount))
         let inventory = InventoryMessage(count: 1, inventoryItems: [InventoryItem(type: InventoryItem.ObjectType.transactionMessage.rawValue, hash: transaction.txID)])
-        print("txID: \(transaction.txID.hex)")
         for peer in peers {
             peer.sendMessage(inventory)
         }
@@ -197,6 +202,24 @@ extension PeerManager: PeerDelegate {
         guard let merkleBlockHeight = peer.context.currentMerkleBlock?.height else {
             return
         }
+        // check whether tx contains new utxo
+        var utxos = [UnspentTransactionOutput]()
+        for (index, txOutput) in transaction.outputs.enumerated() {
+            let lockingScript = txOutput.lockingScript
+            guard Script.isP2PKHLockingScript(lockingScript) else {
+                continue
+            }
+            let pubkeyHash = Script.getPublicKeyHash(from: lockingScript)
+            guard pubkeyHashes.contains(pubkeyHash) else {
+                continue
+            }
+            let utxo = UnspentTransactionOutput(hash: transaction.hash, index: UInt32(index), value: txOutput.value, lockingScript: lockingScript, pubkeyHash: pubkeyHash, lockTime: transaction.lockTime)
+            try! database.addUTXO(utxo: utxo, height: merkleBlockHeight)
+            utxos.append(utxo)
+        }
+        guard !utxos.isEmpty else {
+            return  // tx is irrelevant
+        }
         // check whether tx is known or unknown
         if let height = try! database.selectPaymentHeight(txID: transaction.txID) {
             guard merkleBlockHeight != height else {
@@ -206,35 +229,32 @@ extension PeerManager: PeerDelegate {
             peer.log(PeerLog(message: "payment is confirmed", type: .other))
         } else {
             // unknown tx
-            // check whether tx contains new utxo
-            let pubKeyHashes = pubkeys.map { $0.pubkeyHash }
-            var utxos = [UnspentTransactionOutput]()
-            for (index, txOutput) in transaction.outputs.enumerated() {
-                let lockingScript = txOutput.lockingScript
-                guard Script.isP2PKHLockingScript(lockingScript) else {
-                    continue
-                }
-                let pubkeyHash = Script.getPublicKeyHash(from: lockingScript)
-                guard pubKeyHashes.contains(pubkeyHash) else {
-                    continue
-                }
-                let utxo = UnspentTransactionOutput(hash: transaction.hash, index: UInt32(index), value: txOutput.value, lockingScript: lockingScript, pubkeyHash: pubkeyHash, lockTime: transaction.lockTime)
-                try! database.addUTXO(utxo: utxo, height: merkleBlockHeight)
-                utxos.append(utxo)
-            }
-            guard !utxos.isEmpty else {
-                return  // tx is irrelevant
-            }
             let receiveAmount = utxos.reduce(0) { $0 + $1.value }
             let payment = Payment(txID: transaction.txID, direction: .received, amount: receiveAmount, blockHeight: merkleBlockHeight)
             try! database.addPayment(payment)
+            delegate?.paymentAdded(payment)
             peer.log(PeerLog(message: "found received tx", type: .other))
         }
     }
 
     func peer(_ peer: Peer, didReceiveGetData inventory: InventoryItem) {
-        for (hash, tx) in transactions where hash == inventory.hash {
-            peer.sendMessage(tx)
+        guard let objectType = InventoryItem.ObjectType(rawValue: inventory.type) else {
+            peer.log(PeerLog(message: "malformed inv message: objecttype cannot be decoded", type: .error))
+            return
+        }
+        switch objectType {
+        case .transactionMessage:
+            peer.log(PeerLog(message: "object type: transactionMessage, hash: \(inventory.hash.hex)", type: .from))
+            for (offset: index, element: (tx: tx, sendAmount: amount)) in txsToBroadcast.enumerated() where tx.txID == inventory.hash {
+                peer.sendMessage(tx)
+                peer.log(PeerLog(message: "broadcasting txID: \(tx.txID.hex)", type: .to))
+                let payment = Payment(txID: tx.txID, direction: .sent, amount: amount)
+                try! database.addPayment(payment)
+                delegate?.paymentAdded(payment)
+                txsToBroadcast.remove(at: index)
+            }
+        default:
+            peer.log(PeerLog(message: "inv object type: non-transactionMessage", type: .from))
         }
     }
 

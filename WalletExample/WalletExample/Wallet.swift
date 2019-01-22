@@ -30,12 +30,15 @@ class Wallet: PeerManagerDelegate {
     }
     
     private init() {
-//        let dbPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
-//        print("DB Path: \(dbPath)")
+        let dbPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+        print("DB Path: \(dbPath)")
         self.privateKey = try! PrivateKey.init(wif: "cQ2BQqKL44d9az7JuUx8b1CSGx5LkQrTM7UQKjYGnrHiMX5nUn5C")
         print("pubkey: \(privateKey.publicKey.base58Address)")
+        
         let database = try! SQLiteDatabase.default()
-        peerManager = PeerManager(database: database, pubkeys: [publicKey], lastCheckedBlockHeight: 1452922)
+        balance = try! database.calculateBalance(pubKeyHash: privateKey.publicKey.pubkeyHash)
+        payments = try! database.payments()
+        peerManager = PeerManager(database: database, pubkeys: [publicKey], lastCheckedBlockHeight: 1414448)
         peerManager.delegate = self
         peerManager.start()
     }
