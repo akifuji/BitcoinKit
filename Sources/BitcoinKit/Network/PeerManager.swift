@@ -84,7 +84,13 @@ public class PeerManager {
             self.lastCheckedBlockHeight = lastBlockHeight
             delegate?.lastCheckedBlockHeightUpdated(lastBlockHeight)
         }
-        // TODO: handle the case where inventoryItems.count > GetDataMessage.maximumEntries
+        let maxIndex: Int = inventoryItems.count / GetDataMessage.maximumEntries
+        for index in 0...maxIndex {
+            let end = index == maxIndex ? inventoryItems.count : (index + 1) * GetDataMessage.maximumEntries
+            peer.sendGetDataMessage(Array(inventoryItems[index * GetDataMessage.maximumEntries..<end]))
+        }
+        self.lastCheckedBlockHeight = lastBlockHeight
+        delegate?.lastCheckedBlockHeightUpdated(lastBlockHeight)
     }
 
     public func send(toAddress: String, amount: UInt64) {
