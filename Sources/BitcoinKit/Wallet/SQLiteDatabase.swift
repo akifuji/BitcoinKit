@@ -19,6 +19,7 @@ public protocol Database {
     // Block Header
     func addBlockHeader(_ blockHeader: Block, height: UInt32) throws
     func latestBlockHeader() throws -> Block?
+    func selectBlockHeight(hash: Data) throws -> UInt32?
     func selectBlockHashes(from height: UInt32) throws -> [Data]   // get block hashes to latest block
     // UTXO
     func addUTXO(utxo: UnspentTransactionOutput) throws
@@ -45,7 +46,6 @@ public class SQLiteDatabase: Database {
         try execute { sqlite3_open(file.path, &database) }
         try execute { sqlite3_exec(database,
                                    """
-                                    PRAGMA foreign_keys = ON;
                                     CREATE TABLE IF NOT EXISTS block_headers (
                                         id BLOB NOT NULL PRIMARY KEY,
                                         version INTEGER NOT NULL,
@@ -57,15 +57,15 @@ public class SQLiteDatabase: Database {
                                         tx_count INTEGER NOT NULL,
                                         height INTEGER NOT NULL
                                     );
-                                    CREATE TABLE IF NOT EXISTS utxo (
-                                        id BLOB NOT NULL,
-                                        index INTEGER NOT NULL,
+                                    CREATE TABLE IF NOT EXISTS utxos (
+                                        id BLOB NOT NULL PRIMARY KEY,
+                                        out_index INTEGER NOT NULL,
                                         value INTEGER NOT NULL,
                                         locking_script BLOB NOT NULL,
                                         pubkey_hash BLOB NOT NULL,
                                         lock_time BLOB NOT NULL
                                     );
-                                    CREATE TABLE IF NOT EXISTS payment (
+                                    CREATE TABLE IF NOT EXISTS payments (
                                         id BLOB NOT NULL PRIMARY KEY,
                                         direction BLOB NOT NULL,
                                         amount INTEGER NOT NULL,
@@ -103,6 +103,18 @@ public class SQLiteDatabase: Database {
             }
             return statement
             }()
+        statements["selectBlockHeight"] = try {
+            var statement: OpaquePointer?
+            try execute { sqlite3_prepare_v2(database,
+                                             """
+                                             SELECT height FROM block_headers WHERE id == ?;
+                                             """,
+                                             -1,
+                                             &statement,
+                                             nil)
+            }
+            return statement
+            }()
         statements["selectBlockHashes"] = try {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
@@ -119,10 +131,46 @@ public class SQLiteDatabase: Database {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
                                              """
-                                             REPLACE INTO payment
-                                                (id, index, value, locking_script, pubkey_hash, lock_time)
+                                             REPLACE INTO utxos
+                                                (id, out_index, value, locking_script, pubkey_hash, lock_time)
                                                 VALUES
                                                 (?,    ?,     ?,          ?,            ?,          ?);
+                                             """,
+                                             -1,
+                                             &statement,
+                                             nil)
+            }
+            return statement
+            }()
+        statements["unspentTransactions"] = try {
+            var statement: OpaquePointer?
+            try execute { sqlite3_prepare_v2(database,
+                                             """
+                                             SELECT * FROM utxos;
+                                             """,
+                                             -1,
+                                             &statement,
+                                             nil)
+            }
+            return statement
+            }()
+        statements["calculateBalance"] = try {
+            var statement: OpaquePointer?
+            try execute { sqlite3_prepare_v2(database,
+                                             """
+                                             SELECT value FROM utxos;
+                                             """,
+                                             -1,
+                                             &statement,
+                                             nil)
+            }
+            return statement
+            }()
+        statements["selectUTXO"] = try {
+            var statement: OpaquePointer?
+            try execute { sqlite3_prepare_v2(database,
+                                             """
+                                             SELECT * FROM utxos WHERE pubkey_hash == ?;
                                              """,
                                              -1,
                                              &statement,
@@ -134,7 +182,7 @@ public class SQLiteDatabase: Database {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
                                              """
-                                             REPLACE INTO payment
+                                             REPLACE INTO payments
                                                 (id, direction, amount, block_height)
                                                 VALUES
                                                 (?,      ?,       ?,         ?);
@@ -149,7 +197,7 @@ public class SQLiteDatabase: Database {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
                                              """
-                                             SELECT * FROM payment;
+                                             SELECT * FROM payments;
                                              """,
                                              -1,
                                              &statement,
@@ -157,48 +205,11 @@ public class SQLiteDatabase: Database {
             }
             return statement
             }()
-        statements["unspentTransactions"] = try {
-            var statement: OpaquePointer?
-            try execute { sqlite3_prepare_v2(database,
-                                             """
-                                             SELECT * FROM view_utxo WHERE pub_key_hash == ?;
-                                             """,
-                                             -1,
-                                             &statement,
-                                             nil)
-            }
-            return statement
-            }()
-        statements["calculateBalance"] = try {
-            var statement: OpaquePointer?
-            try execute { sqlite3_prepare_v2(database,
-                                             """
-                                             SELECT value FROM view_utxo WHERE pub_key_hash == ?;
-                                             """,
-                                             -1,
-                                             &statement,
-                                             nil)
-            }
-            return statement
-            }()
-        statements["selectUTXO"] = try {
-            var statement: OpaquePointer?
-            try execute { sqlite3_prepare_v2(database,
-                                             """
-                                             SELECT * FROM view_utxo WHERE pub_key_hash == ?;
-                                             """,
-                                             -1,
-                                             &statement,
-                                             nil)
-            }
-            return statement
-            }()
-
         statements["selectPaymentHeight"] = try {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
                                              """
-                                             SELECT block_height FROM payment WHERE id == ?;
+                                             SELECT block_height FROM payments WHERE id == ?;
                                              """,
                                              -1,
                                              &statement,
@@ -210,7 +221,7 @@ public class SQLiteDatabase: Database {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
                                              """
-                                             UPDATE payment SET block_height = ? WHERE id == ?;
+                                             UPDATE payments SET block_height = ? WHERE id == ?;
                                              """,
                                              -1,
                                              &statement,
@@ -268,12 +279,23 @@ public class SQLiteDatabase: Database {
         return block
     }
 
+    public func selectBlockHeight(hash: Data) throws -> UInt32? {
+        let statement = statements["selectBlockHeight"]
+        try execute { hash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(hash.count), SQLITE_TRANSIENT) } }
+        var height: UInt32?
+        if sqlite3_step(statement) == SQLITE_ROW {
+            height = UInt32(sqlite3_column_int64(statement, 1))
+        }
+        try execute { sqlite3_reset(statement) }
+        return height
+    }
+
     public func selectBlockHashes(from height: UInt32) throws -> [Data] {
         let statement = statements["selectBlockHashes"]
         try execute { sqlite3_bind_int(statement, 1, Int32(height)) }
         var hashes = [Data]()
         while sqlite3_step(statement) == SQLITE_ROW {
-            guard let hash = sqlite3_column_blob(statement, 1) else {
+            guard let hash = sqlite3_column_blob(statement, 0) else {
                 continue
             }
             hashes.append(Data(bytes: hash, count: 32))
@@ -376,11 +398,11 @@ public class SQLiteDatabase: Database {
     }
 
     public func selectPaymentHeight(txID: Data) throws -> UInt32? {
-        let statement = statements["selectPayment"]
+        let statement = statements["selectPaymentHeight"]
         try execute { txID.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(txID.count), SQLITE_TRANSIENT) } }
         var height: UInt32?
         if sqlite3_step(statement) == SQLITE_ROW {
-            height = UInt32(sqlite3_column_int64(statement, 1))
+            height = UInt32(sqlite3_column_int64(statement, 0))
         }
         try execute { sqlite3_reset(statement) }
         return height

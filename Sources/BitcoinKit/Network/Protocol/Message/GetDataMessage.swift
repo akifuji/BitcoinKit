@@ -9,6 +9,7 @@
 import Foundation
 
 struct GetDataMessage: Message {
+    static let maximumEntries = 50_000
     static var command: String {
         return "getdata"
     }

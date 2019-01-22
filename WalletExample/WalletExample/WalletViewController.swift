@@ -40,8 +40,6 @@ class WalletViewController: UIViewController, UITableViewDelegate, UITableViewDa
         
         NotificationCenter.default.addObserver(self, selector: #selector(balanceChanged(notification:)), name: Notification.Name.Wallet.balanceChanged, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(paymentAdded(notification:)), name: Notification.Name.Wallet.paymentAdded, object: nil)
-//        let dbPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
-//        print("DB Path: \(dbPath)")
     }
     
     override func viewWillAppear(_ animated: Bool) {

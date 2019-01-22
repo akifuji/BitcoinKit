@@ -12,22 +12,23 @@ public protocol PeerManagerDelegate: class {
     func balanceChanged(_ balance: UInt64)
     func paymentAdded(_ payment: Payment)
     func logged(_ log: PeerLog)
+    func lastCheckedBlockHeightUpdated(_ height: UInt32)
 }
 
 public class PeerManager {
     let database: Database
     let network: Network
     let maxConnections: Int
-    var peers: [Peer] = []
+    var peers = [Peer]()
     var lastBlock: Block?
-    var lastCheckedBlock: Block! // have checked whether any payments exsist to this block
-    var pubkeys: [PublicKey] = []
+    var lastCheckedBlockHeight: UInt32? // have checked whether any payments exsist to this block
+    var pubkeys = [PublicKey]()
     var nextCheckpointIndex: Int = 0
     var transactions = [Data: Transaction]()
 
     public weak var delegate: PeerManagerDelegate?
 
-    public init(database: Database, network: Network = .testnet, maxConnections: Int = 1, pubkeys: [PublicKey] = []) {
+    public init(database: Database, network: Network = .testnet, maxConnections: Int = 1, pubkeys: [PublicKey] = [], lastCheckedBlockHeight: UInt32?) {
         self.database = database
         self.network = network
         self.maxConnections = maxConnections
@@ -39,6 +40,7 @@ public class PeerManager {
                 break
             }
         }
+        self.lastCheckedBlockHeight = lastCheckedBlockHeight
     }
 
     public func start() {
@@ -71,12 +73,17 @@ public class PeerManager {
     }
 
     private func sendGetBlockData(from peer: Peer) {
-        guard let lastBlockHeight = lastBlock?.height, let lastCheckedBlockHeight = lastCheckedBlock?.height, lastBlockHeight < lastCheckedBlockHeight else {
+        guard let lastBlockHeight = lastBlock?.height, let lastCheckedBlockHeight = lastCheckedBlockHeight, lastCheckedBlockHeight < lastBlockHeight else {
             return
         }
+        print("\(lastCheckedBlockHeight)")
         let hashes = try! database.selectBlockHashes(from: lastCheckedBlockHeight)
-        let inventoryItems = hashes.map { InventoryItem(type: InventoryItem.ObjectType.filteredBlockMessage.rawValue, hash: $0) }
-        peer.sendGetDataMessage(inventoryItems)
+        let inventoryItems: [InventoryItem] = hashes.map { InventoryItem(type: InventoryItem.ObjectType.filteredBlockMessage.rawValue, hash: $0) }
+        if inventoryItems.count <= GetDataMessage.maximumEntries {
+            peer.sendGetDataMessage(inventoryItems)
+        }
+        self.lastCheckedBlockHeight = lastBlockHeight
+        delegate?.lastCheckedBlockHeightUpdated(lastBlockHeight)
     }
 
     public func send(toAddress: String, amount: UInt64) {
@@ -113,6 +120,11 @@ extension PeerManager: PeerDelegate {
                 peer.log(PeerLog(message: "node isn't synced: height is \(remoteNodeHeight)", type: .other))
                 peer.disconnect()
                 return
+            }
+            // lastCheckedBlockHeight is nil when initializing wallet for the first time
+            // txs need to be checked from that point
+            if lastCheckedBlockHeight == nil {
+                lastCheckedBlockHeight = UInt32(remoteNodeHeight)
             }
             if lastBlock.height >= remoteNodeHeight {
                 loadBloomFilter()
@@ -164,13 +176,14 @@ extension PeerManager: PeerDelegate {
 
     func peer(_ peer: Peer, didReceiveMerkleBlock merkleBlock: MerkleBlockMessage) {
         peer.context.currentMerkleBlock = merkleBlock
-        if merkleBlock.prevBlock == lastCheckedBlock.blockHash {
-            peer.context.currentMerkleBlock?.height = lastCheckedBlock.height
+        if let blockHeight = try! database.selectBlockHeight(hash: merkleBlock.blockHash) {
+            peer.context.currentMerkleBlock?.height = blockHeight
         } else if let lastBlock = lastBlock, merkleBlock.prevBlock == lastBlock.blockHash {
             peer.context.currentMerkleBlock?.height = lastBlock.height
+        } else {
+            peer.log(PeerLog(message: "the prev block of merkle block does not match", type: .error))
+            peer.context.currentMerkleBlock = nil
         }
-        peer.log(PeerLog(message: "the prev block of merkle block does not match", type: .error))
-        peer.context.currentMerkleBlock = nil
     }
 
     func peer(_ peer: Peer, didReceiveTransaction transaction: Transaction) {
