@@ -153,7 +153,7 @@ struct MerkleBlockMessage: Message {
             let left = try buildPartialMerkleTree(hashIterator: &hashIterator, boolFlagIterator: &boolFlagIterator, depth: depth + 1, maxDepth: maxDepth)
             let right = (try? buildPartialMerkleTree(hashIterator: &hashIterator, boolFlagIterator: &boolFlagIterator, depth: depth + 1, maxDepth: maxDepth)) ?? left // if right branch is missing, duplicate left branch
             if left.hash == right.hash {
-                guard hashIterator.next() == nil && boolFlagIterator.next() == nil else {
+                guard hashIterator.next() == nil else {
                     throw ProtocolError.error("should not iterate any more") // defend against (CVE-2012-2459)
                 }
             }
