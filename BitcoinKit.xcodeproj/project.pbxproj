@@ -63,6 +63,11 @@
 		0CC4682D21E58734007828F3 /* GetDataMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC4682C21E58734007828F3 /* GetDataMessage.swift */; };
 		0CC4682F21E587A4007828F3 /* InventoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC4682E21E587A4007828F3 /* InventoryItem.swift */; };
 		0CC4683121E58A17007828F3 /* MerkleBlockMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC4683021E58A17007828F3 /* MerkleBlockMessage.swift */; };
+		0CF90EAB21F7D99C008EF6E5 /* BIP44Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF90EAA21F7D99C008EF6E5 /* BIP44Keychain.swift */; };
+		0CF90EAD21F7DAEE008EF6E5 /* ExtendedPrivateKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF90EAC21F7DAEE008EF6E5 /* ExtendedPrivateKey.swift */; };
+		0CF90EAF21F7E578008EF6E5 /* ExtendedPublicKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF90EAE21F7E578008EF6E5 /* ExtendedPublicKey.swift */; };
+		0CF90EB121F7F95A008EF6E5 /* Mnemonic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF90EB021F7F95A008EF6E5 /* Mnemonic.swift */; };
+		0CF90EB321F7FAF1008EF6E5 /* WordList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF90EB221F7FAF1008EF6E5 /* WordList.swift */; };
 		1419E83A202CDBE500FCB0BE /* BitcoinKitPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1419E838202CDBE500FCB0BE /* BitcoinKitPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		1419E83B202CDBE500FCB0BE /* BitcoinKitPrivate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1419E839202CDBE500FCB0BE /* BitcoinKitPrivate.m */; };
 		147494D8201F9A29006D1CF8 /* BitcoinKit.h in Headers */ = {isa = PBXBuildFile; fileRef = 147494CA201F9A29006D1CF8 /* BitcoinKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -136,6 +141,11 @@
 		0CC4682C21E58734007828F3 /* GetDataMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetDataMessage.swift; sourceTree = "<group>"; };
 		0CC4682E21E587A4007828F3 /* InventoryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryItem.swift; sourceTree = "<group>"; };
 		0CC4683021E58A17007828F3 /* MerkleBlockMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MerkleBlockMessage.swift; sourceTree = "<group>"; };
+		0CF90EAA21F7D99C008EF6E5 /* BIP44Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BIP44Keychain.swift; sourceTree = "<group>"; };
+		0CF90EAC21F7DAEE008EF6E5 /* ExtendedPrivateKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtendedPrivateKey.swift; sourceTree = "<group>"; };
+		0CF90EAE21F7E578008EF6E5 /* ExtendedPublicKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtendedPublicKey.swift; sourceTree = "<group>"; };
+		0CF90EB021F7F95A008EF6E5 /* Mnemonic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mnemonic.swift; sourceTree = "<group>"; };
+		0CF90EB221F7FAF1008EF6E5 /* WordList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordList.swift; sourceTree = "<group>"; };
 		1419E838202CDBE500FCB0BE /* BitcoinKitPrivate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = BitcoinKitPrivate.h; path = ../../BitcoinKit/BitcoinKitPrivate.h; sourceTree = "<group>"; };
 		1419E839202CDBE500FCB0BE /* BitcoinKitPrivate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = BitcoinKitPrivate.m; path = ../../BitcoinKit/BitcoinKitPrivate.m; sourceTree = "<group>"; };
 		147494C7201F9A29006D1CF8 /* BitcoinKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = BitcoinKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -187,6 +197,10 @@
 			children = (
 				0CC467B021DD847B007828F3 /* PrivateKey.swift */,
 				0CC467CB21DEE5AD007828F3 /* PublicKey.swift */,
+				0CF90EAC21F7DAEE008EF6E5 /* ExtendedPrivateKey.swift */,
+				0CF90EAE21F7E578008EF6E5 /* ExtendedPublicKey.swift */,
+				0CF90EB021F7F95A008EF6E5 /* Mnemonic.swift */,
+				0CF90EB221F7FAF1008EF6E5 /* WordList.swift */,
 				0CC4681E21E4A086007828F3 /* Transaction.swift */,
 				0CC4682021E4A1AA007828F3 /* TransactionInput.swift */,
 				0CC4682221E4A1DA007828F3 /* TransactionOutPoint.swift */,
@@ -294,6 +308,7 @@
 			children = (
 				0CC4681621E34116007828F3 /* SQLiteDatabase.swift */,
 				0C4FDFDF21F2B3C200BC27B9 /* Payment.swift */,
+				0CF90EAA21F7D99C008EF6E5 /* BIP44Keychain.swift */,
 			);
 			path = Wallet;
 			sourceTree = "<group>";
@@ -531,6 +546,7 @@
 				0CC4681221E2F100007828F3 /* HeadersMessage.swift in Sources */,
 				0CC4681B21E42BFD007828F3 /* PeerManager.swift in Sources */,
 				0CC4681421E2F2C6007828F3 /* Block.swift in Sources */,
+				0CF90EAF21F7E578008EF6E5 /* ExtendedPublicKey.swift in Sources */,
 				0C4FDFD121ED845E00BC27B9 /* UInt256.swift in Sources */,
 				0CC467C321DDDDE6007828F3 /* Crypto.swift in Sources */,
 				0CC467B621DDC34F007828F3 /* Base58.swift in Sources */,
@@ -550,6 +566,8 @@
 				0CC4681F21E4A086007828F3 /* Transaction.swift in Sources */,
 				0C4FDFE421F31E2100BC27B9 /* TransactionBuilder.swift in Sources */,
 				0CC467E321E03E36007828F3 /* ByteStream.swift in Sources */,
+				0CF90EB121F7F95A008EF6E5 /* Mnemonic.swift in Sources */,
+				0CF90EAD21F7DAEE008EF6E5 /* ExtendedPrivateKey.swift in Sources */,
 				0CC4682521E4A446007828F3 /* TransactionOutput.swift in Sources */,
 				0C4FDFE221F2C35800BC27B9 /* UnspentTransactionOutput.swift in Sources */,
 				0CC4682D21E58734007828F3 /* GetDataMessage.swift in Sources */,
@@ -558,9 +576,11 @@
 				0CC467E721E04948007828F3 /* VersionMessage.swift in Sources */,
 				0C4FDFCD21EAF18600BC27B9 /* Message.swift in Sources */,
 				0CC467D221DF034D007828F3 /* Bech32.swift in Sources */,
+				0CF90EAB21F7D99C008EF6E5 /* BIP44Keychain.swift in Sources */,
 				0CC467DF21E02D8F007828F3 /* MessageHeader.swift in Sources */,
 				0CC467B121DD847B007828F3 /* PrivateKey.swift in Sources */,
 				0CC467E521E03E61007828F3 /* VarString.swift in Sources */,
+				0CF90EB321F7FAF1008EF6E5 /* WordList.swift in Sources */,
 				0CC467DA21DF8121007828F3 /* Peer.swift in Sources */,
 				0CC4682B21E57F11007828F3 /* FilterLoadMessage.swift in Sources */,
 				0CC4682121E4A1AA007828F3 /* TransactionInput.swift in Sources */,

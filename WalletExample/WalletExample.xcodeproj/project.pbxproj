@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0C13F92321F5561D00120974 /* LogTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C13F92221F5561D00120974 /* LogTableViewController.swift */; };
 		0C13F92521F55AFA00120974 /* Wallet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C13F92421F55AFA00120974 /* Wallet.swift */; };
+		0CF90EB721F80278008EF6E5 /* KeychainAccess.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0CF90EB521F80226008EF6E5 /* KeychainAccess.framework */; };
 		298E17DF2150C55C00FF6C77 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298E17DE2150C55C00FF6C77 /* AppDelegate.swift */; };
 		298E17E12150C55C00FF6C77 /* WalletViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298E17E02150C55C00FF6C77 /* WalletViewController.swift */; };
 		298E17E42150C55C00FF6C77 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 298E17E22150C55C00FF6C77 /* Main.storyboard */; };
@@ -20,6 +21,7 @@
 /* Begin PBXFileReference section */
 		0C13F92221F5561D00120974 /* LogTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogTableViewController.swift; sourceTree = "<group>"; };
 		0C13F92421F55AFA00120974 /* Wallet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wallet.swift; sourceTree = "<group>"; };
+		0CF90EB521F80226008EF6E5 /* KeychainAccess.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = KeychainAccess.framework; path = WalletExample/Carthage/Build/iOS/KeychainAccess.framework; sourceTree = "<group>"; };
 		298E17DB2150C55C00FF6C77 /* WalletExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WalletExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		298E17DE2150C55C00FF6C77 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		298E17E02150C55C00FF6C77 /* WalletViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletViewController.swift; sourceTree = "<group>"; };
@@ -35,6 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0CF90EB721F80278008EF6E5 /* KeychainAccess.framework in Frameworks */,
 				29EA70342150C885009B6485 /* BitcoinKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -77,6 +80,7 @@
 		29EA70322150C885009B6485 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				0CF90EB521F80226008EF6E5 /* KeychainAccess.framework */,
 				29EA70332150C885009B6485 /* BitcoinKit.framework */,
 			);
 			name = Frameworks;
@@ -92,6 +96,7 @@
 				298E17D72150C55C00FF6C77 /* Sources */,
 				298E17D82150C55C00FF6C77 /* Frameworks */,
 				298E17D92150C55C00FF6C77 /* Resources */,
+				0CF90EB421F801AD008EF6E5 /* Carthage */,
 			);
 			buildRules = (
 			);
@@ -148,6 +153,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		0CF90EB421F801AD008EF6E5 /* Carthage */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/WalletExample/Carthage/Build/iOS/KeychainAccess.framework",
+			);
+			name = Carthage;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/usr/local/bin/carthage copy-frameworks\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		298E17D72150C55C00FF6C77 /* Sources */ = {
@@ -303,6 +330,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 85L5EGE66R;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/WalletExample/Carthage/Build/iOS",
+				);
 				INFOPLIST_FILE = WalletExample/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -321,6 +352,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 85L5EGE66R;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/WalletExample/Carthage/Build/iOS",
+				);
 				INFOPLIST_FILE = WalletExample/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

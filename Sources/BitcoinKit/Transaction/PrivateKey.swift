@@ -21,7 +21,7 @@ public struct PrivateKey {
     public let isPublicKeyCompressed: Bool
 
     public var wif: String {
-        var payload: Data = Data([network.privatekeyVersionByte]) + data
+        var payload: Data = Data([network.privatekey]) + data
         if isPublicKeyCompressed {
             // Add extra byte 0x01 in the end.
             payload += Int8(0x01)
@@ -89,9 +89,9 @@ public struct PrivateKey {
         }
         // Check the first byte
         switch checksumDropped[0] {
-        case Network.mainnet.privatekeyVersionByte:
+        case Network.mainnet.privatekey:
             network = .mainnet
-        case Network.testnet.privatekeyVersionByte:
+        case Network.testnet.privatekey:
             network = .testnet
         default:
             throw PrivateKeyError.invalidFormat

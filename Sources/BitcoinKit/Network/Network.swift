@@ -17,10 +17,12 @@ public class Network {
     public static let mainnet: Network = Mainnet()
     public static let testnet: Network = Testnet()
     public var name: String { return "" }
-    var privatekeyVersionByte: UInt8 { return 0 }
     // version byte
-    public var pubkeyhash: UInt8 { return 0 }
-    // Network
+    var privatekey: UInt8 { return 0 }
+    var pubkeyhash: UInt8 { return 0 }
+    var xprivkey: UInt32 { return 0 }
+    var xpubkey: UInt32 { return 0 }
+    // network
     var magic: UInt32 { return 0 }
     public var port: UInt32 { return 0 }
     public var dnsSeeds: [String] { return [] }
@@ -54,12 +56,20 @@ public class Mainnet: Network {
     public override var name: String {
         return "mainnet"
     }
+    // version byte
+    override var privatekey: UInt8 {
+        return 0x80
+    }
     override public var pubkeyhash: UInt8 {
         return 0x00
     }
-    override var privatekeyVersionByte: UInt8 {
-        return 0x80
+    override var xpubkey: UInt32 {
+        return 0x0488b21e
     }
+    override var xprivkey: UInt32 {
+        return 0x0488ade4
+    }
+    // network
     override var magic: UInt32 {
         return 0xf9beb4d9
     }
@@ -119,12 +129,20 @@ public class Testnet: Network {
     public override var name: String {
         return "testnet"
     }
+    // version byte
+    override var privatekey: UInt8 {
+        return 0xef
+    }
     override public var pubkeyhash: UInt8 {
         return 0x6f
     }
-    override var privatekeyVersionByte: UInt8 {
-        return 0xef
+    override var xpubkey: UInt32 {
+        return 0x043587cf
     }
+    override var xprivkey: UInt32 {
+        return 0x04358394
+    }
+    // network
     override var magic: UInt32 {
         return 0x0b110907
     }

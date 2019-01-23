@@ -82,6 +82,10 @@ extension Data {
 }
 
 extension Data {
+    var checksum: Data {
+        return Crypto.sha256sha256(self).prefix(4)
+    }
+
     public init?(hex: String) {
         let length = hex.count / 2
         var data: Data = Data(capacity: length)
@@ -100,5 +104,9 @@ extension Data {
 
     public var hex: String {
         return reduce("") { $0 + String(format: "%02x", $1) }
+    }
+
+    var description: String {
+        return hex
     }
 }
