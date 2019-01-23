@@ -20,12 +20,20 @@ class Wallet: PeerManagerDelegate {
     var publicKey: PublicKey {
         return privateKey.publicKey
     }
-    var lastCheckedBlockHeight: UInt32 {
-        set {
-            UserDefaults.standard.set(Int(newValue), forKey: #function)
+    var mnemonic: [String]? {
+        get {
+            return UserDefaults.standard.array(forKey: #function) as? [String]
         }
+        set {
+            UserDefaults.standard.set(newValue, forKey: #function)
+        }
+    }
+    var lastCheckedBlockHeight: UInt32 {
         get {
             return UInt32(UserDefaults.standard.integer(forKey: #function))
+        }
+        set {
+            UserDefaults.standard.set(Int(newValue), forKey: #function)
         }
     }
     

@@ -27,7 +27,7 @@
             </objects>
             <point key="canvasLocation" x="-1457" y="46"/>
         </scene>
-        <!--Item-->
+        <!--Wallet-->
         <scene sceneID="tne-QT-ifu">
             <objects>
                 <viewController id="BYZ-38-t0r" customClass="WalletViewController" customModule="WalletExample" customModuleProvider="target" sceneMemberID="viewController">
@@ -131,7 +131,7 @@
                         </constraints>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                     </view>
-                    <tabBarItem key="tabBarItem" title="Item" id="kF6-co-gZV"/>
+                    <tabBarItem key="tabBarItem" title="Wallet" selectedImage="home" id="kF6-co-gZV" userLabel="Home"/>
                     <connections>
                         <outlet property="addressLabel" destination="Vvt-UO-rEN" id="QAe-WF-69t"/>
                         <outlet property="balanceLabel" destination="bkx-0b-bjo" id="hpZ-n3-K2S"/>
@@ -143,7 +143,7 @@
             </objects>
             <point key="canvasLocation" x="-553" y="-364"/>
         </scene>
-        <!--Item-->
+        <!--Log-->
         <scene sceneID="6ml-kz-bHw">
             <objects>
                 <viewController id="IDx-eH-e6B" customClass="LogViewController" customModule="WalletExample" customModuleProvider="target" sceneMemberID="viewController">
@@ -198,7 +198,7 @@
                         </constraints>
                         <viewLayoutGuide key="safeArea" id="pRN-mx-pCH"/>
                     </view>
-                    <tabBarItem key="tabBarItem" title="Item" id="xcI-sN-Pam"/>
+                    <tabBarItem key="tabBarItem" title="Log" selectedImage="send" id="xcI-sN-Pam"/>
                     <connections>
                         <outlet property="blockHeightTextField" destination="3k4-mr-RQi" id="N3M-QH-7Qq"/>
                         <outlet property="tableView" destination="6C7-Sm-Fcb" id="k1j-Cu-moP"/>
@@ -206,7 +206,11 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="bAS-pC-rFB" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="-332" y="555.66502463054189"/>
+            <point key="canvasLocation" x="-554" y="556"/>
         </scene>
     </scenes>
+    <resources>
+        <image name="home" width="24" height="24"/>
+        <image name="send" width="24" height="24"/>
+    </resources>
 </document>
