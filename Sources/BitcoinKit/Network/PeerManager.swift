@@ -76,7 +76,7 @@ public class PeerManager {
     }
 
     private func sendGetBlockData(from peer: Peer) {
-        guard let lastBlockHeight = lastBlock?.height, let lastCheckedBlockHeight = lastCheckedBlockHeight, lastCheckedBlockHeight < peer.context.remoteNodeHeight else {
+        guard let lastCheckedBlockHeight = lastCheckedBlockHeight, lastCheckedBlockHeight < peer.context.remoteNodeHeight else {
             return
         }
         let hashes = try! database.selectBlockHashes(from: lastCheckedBlockHeight)
@@ -90,11 +90,11 @@ public class PeerManager {
                 peer.sendGetDataMessage(Array(inventoryItems[index * GetDataMessage.maximumEntries..<end]))
             }
         }
-        self.lastCheckedBlockHeight = lastBlockHeight
-        delegate?.lastCheckedBlockHeightUpdated(lastBlockHeight)
+        self.lastCheckedBlockHeight = UInt32(peer.context.remoteNodeHeight)
+        delegate?.lastCheckedBlockHeightUpdated(UInt32(peer.context.remoteNodeHeight))
     }
 
-    public func send(toAddress: String, amount: UInt64) {
+    public func send(toAddress: String, amount: UInt64, changeAddress: String) {
         let txBuilder = TransactionBuilder()
         let utxos: [UnspentTransactionOutput] = pubkeyHashes
             .map { try! database.selectUTXO(pubKeyHash: $0) }
@@ -190,7 +190,8 @@ extension PeerManager: PeerDelegate {
         if let blockHeight = try! database.selectBlockHeight(hash: merkleBlock.blockHash) {
             peer.context.currentMerkleBlock?.height = blockHeight
         } else if let lastBlock = lastBlock, merkleBlock.prevBlock == lastBlock.blockHash {
-            peer.context.currentMerkleBlock?.height = lastBlock.height
+            peer.context.currentMerkleBlock?.height = lastBlock.height + 1
+
         } else {
             peer.log(PeerLog(message: "the prev block of merkle block does not match", type: .error))
             peer.context.currentMerkleBlock = nil

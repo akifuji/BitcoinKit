@@ -43,17 +43,17 @@ class WalletViewController: UIViewController, UITableViewDelegate, UITableViewDa
     
     override func viewWillAppear(_ animated: Bool) {
         updateBalance()
-        let address: String = wallet.publicKey.base58Address
+        let address: String = wallet.receivePublicKey.base58Address
         qrCodeImageView.image = generateVisualCode(address: address)
         addressLabel.text = "address: \(address)"
     }
     
     @IBAction func didTapQRCodeButton(_ sender: Any) {
-        UIPasteboard.general.string = wallet.publicKey.base58Address
+        UIPasteboard.general.string = wallet.receivePublicKey.base58Address
     }
     
     @IBAction func didTapSendButton(_ sender: UIButton) {
-        wallet.peerManager.send(toAddress: "mjPAZNeeSid5F9BKt6hYKgfRWrADDtgCVp", amount: 5000)
+        wallet.peerManager.send(toAddress: "mjPAZNeeSid5F9BKt6hYKgfRWrADDtgCVp", amount: 5000, changeAddress: wallet.changePublicKey.base58Address)
     }
     
     private func updateBalance() {

@@ -25,7 +25,7 @@ public protocol Database {
     func addUTXO(utxo: UnspentTransactionOutput, height: UInt32) throws
     func unspentTransactionOutputs() throws -> [UnspentTransactionOutput]
     func selectUTXO(pubKeyHash: Data) throws -> [UnspentTransactionOutput]
-    func calculateBalance(pubKeyHash: Data) throws -> UInt64
+    func calculateBalance() throws -> UInt64
     func deleteUTXO(pubkeyHash: Data) throws -> Bool
     // Payment
     func addPayment(_ payment: Payment) throws
@@ -160,7 +160,7 @@ public class SQLiteDatabase: Database {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
                                              """
-                                             SELECT value FROM utxos where pubkey_hash = ?;
+                                             SELECT value FROM utxos;
                                              """,
                                              -1,
                                              &statement,
@@ -371,9 +371,8 @@ public class SQLiteDatabase: Database {
         return utxos
     }
 
-    public func calculateBalance(pubKeyHash: Data) throws -> UInt64 {
+    public func calculateBalance() throws -> UInt64 {
         let statement = statements["calculateBalance"]
-        try execute { pubKeyHash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(pubKeyHash.count), SQLITE_TRANSIENT) } }
         var balance: UInt64 = 0
         while sqlite3_step(statement) == SQLITE_ROW {
             balance += UInt64(sqlite3_column_int64(statement, 0))
