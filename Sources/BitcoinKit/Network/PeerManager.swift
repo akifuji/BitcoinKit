@@ -76,7 +76,7 @@ public class PeerManager {
     }
 
     private func sendGetBlockData(from peer: Peer) {
-        guard let lastBlockHeight = lastBlock?.height, let lastCheckedBlockHeight = lastCheckedBlockHeight, lastCheckedBlockHeight < lastBlockHeight else {
+        guard let lastBlockHeight = lastBlock?.height, let lastCheckedBlockHeight = lastCheckedBlockHeight, lastCheckedBlockHeight < peer.context.remoteNodeHeight else {
             return
         }
         let hashes = try! database.selectBlockHashes(from: lastCheckedBlockHeight)
