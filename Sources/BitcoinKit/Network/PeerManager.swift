@@ -22,7 +22,7 @@ public class PeerManager {
     var peers = [Peer]()
     var lastBlock: Block?
     var lastCheckedBlockHeight: UInt32? // have checked whether any payments exsist to this block
-    var pubkeys = [PublicKey]()
+    public var pubkeys = [PublicKey]()
     var pubkeyHashes: [Data] {
         return pubkeys.map { $0.pubkeyHash }
     }
@@ -94,7 +94,7 @@ public class PeerManager {
         delegate?.lastCheckedBlockHeightUpdated(UInt32(peer.context.remoteNodeHeight))
     }
 
-    public func send(toAddress: String, amount: UInt64, changeAddress: String) {
+    public func send(toAddress: String, amount: UInt64, changeAddress: String, allKeys: [PrivateKey]) {
         let txBuilder = TransactionBuilder()
         let utxos: [UnspentTransactionOutput] = pubkeyHashes
             .map { try! database.selectUTXO(pubKeyHash: $0) }
@@ -104,8 +104,8 @@ public class PeerManager {
             let (utxosToSpend, fee) = try txBuilder.selectUTXOs(from: utxos, targetValue: amount)
             let totalAmount: UInt64 = utxosToSpend.sum()
             let change: UInt64 = totalAmount - amount - fee
-            let destinations: [(String, UInt64)] = [(toAddress, amount), (pubkeys[0].base58Address, change)]
-            transaction = try txBuilder.buildTransaction(destinations: destinations, utxos: utxos, keys: [try! PrivateKey(wif: "cQ2BQqKL44d9az7JuUx8b1CSGx5LkQrTM7UQKjYGnrHiMX5nUn5C")])
+            let destinations: [(String, UInt64)] = [(toAddress, amount), (changeAddress, change)]
+            transaction = try txBuilder.buildTransaction(destinations: destinations, utxos: utxos, keys: allKeys)
         } catch TransactionBuilderError.error(let message) {
             print("failt to build tx: \(message)")
         } catch let error {
@@ -191,7 +191,6 @@ extension PeerManager: PeerDelegate {
             peer.context.currentMerkleBlock?.height = blockHeight
         } else if let lastBlock = lastBlock, merkleBlock.prevBlock == lastBlock.blockHash {
             peer.context.currentMerkleBlock?.height = lastBlock.height + 1
-
         } else {
             peer.log(PeerLog(message: "the prev block of merkle block does not match", type: .error))
             peer.context.currentMerkleBlock = nil
@@ -199,12 +198,11 @@ extension PeerManager: PeerDelegate {
     }
 
     func peer(_ peer: Peer, didReceiveTransaction transaction: Transaction) {
-        guard let merkleBlockHeight = peer.context.currentMerkleBlock?.height else {
-            return
-        }
+        let merkleBlockHeight = peer.context.currentMerkleBlock?.height
         var isMyTransaction = false
         // check whether tx contains my utxos
-        for input in transaction.inputs where try! database.deleteUTXO(pubkeyHash: input.previousOutput.hash) {
+        for input in transaction.inputs where try! database.deleteUTXO(hash: input.previousOutput.hash) {
+            delegate?.balanceChanged(try! database.calculateBalance())
             isMyTransaction = true
         }
         // check whether tx contains new utxos
@@ -218,17 +216,20 @@ extension PeerManager: PeerDelegate {
             guard pubkeyHashes.contains(pubkeyHash) else {
                 continue
             }
-            let utxo = UnspentTransactionOutput(hash: transaction.hash, index: UInt32(index), value: txOutput.value, lockingScript: lockingScript, pubkeyHash: pubkeyHash, lockTime: transaction.lockTime)
-            try! database.addUTXO(utxo: utxo, height: merkleBlockHeight)
-            utxos.append(utxo)
             isMyTransaction = true
+            let utxo = UnspentTransactionOutput(hash: transaction.hash, index: UInt32(index), value: txOutput.value, lockingScript: lockingScript, pubkeyHash: pubkeyHash, lockTime: transaction.lockTime)
+            utxos.append(utxo)
+            if let merkleBlockHeight = merkleBlockHeight {
+                try! database.addUTXO(utxo: utxo, height: merkleBlockHeight)
+                delegate?.balanceChanged(try! database.calculateBalance())
+            }
         }
         guard isMyTransaction else {
             return  // tx is irrelevant
         }
         // check whether tx is known or unknown
         if let height = try! database.selectPaymentHeight(txID: transaction.txID) {
-            guard merkleBlockHeight != height else {
+            guard let merkleBlockHeight = merkleBlockHeight, merkleBlockHeight != height else {
                 return // exactly same tx is already in DB
             }
             try! database.updatePaymentHeight(txID: transaction.txID, height: merkleBlockHeight)
@@ -236,7 +237,7 @@ extension PeerManager: PeerDelegate {
         } else {
             // unknown tx
             let receiveAmount = utxos.reduce(0) { $0 + $1.value }
-            let payment = Payment(txID: transaction.txID, direction: .received, amount: receiveAmount, blockHeight: merkleBlockHeight)
+            let payment = Payment(txID: transaction.txID, direction: .received, amount: receiveAmount, blockHeight: merkleBlockHeight ?? Block.unknownHeight)
             try! database.addPayment(payment)
             delegate?.paymentAdded(payment)
             peer.log(PeerLog(message: "found received tx", type: .other))

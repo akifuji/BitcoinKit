@@ -26,7 +26,8 @@ class Wallet: PeerManagerDelegate {
             if let data = keychain[data: "mnemonic"], let mnemonic = try? JSONDecoder().decode([String].self, from: data) {
                 return mnemonic
             } else {
-                return try! Mnemonic.generate(language: .english)
+                self.mnemonic = try! Mnemonic.generate(language: .english)
+                return self.mnemonic
             }
         }
         set {
@@ -108,6 +109,11 @@ class Wallet: PeerManagerDelegate {
     
     func paymentAdded(_ payment: Payment) {
         payments.append(payment)
+        if payment.direction == .sent {
+            incrementChangeKeyIndex()
+        }
+        incrementReceiveKeyIndex()
+        peerManager.pubkeys = allPublicKeys
         NotificationCenter.default.post(name: Notification.Name.Wallet.paymentAdded, object: self)
     }
     

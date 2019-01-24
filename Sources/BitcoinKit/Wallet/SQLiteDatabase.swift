@@ -26,7 +26,7 @@ public protocol Database {
     func unspentTransactionOutputs() throws -> [UnspentTransactionOutput]
     func selectUTXO(pubKeyHash: Data) throws -> [UnspentTransactionOutput]
     func calculateBalance() throws -> UInt64
-    func deleteUTXO(pubkeyHash: Data) throws -> Bool
+    func deleteUTXO(hash: Data) throws -> Bool
     // Payment
     func addPayment(_ payment: Payment) throws
     func payments() throws -> [Payment]
@@ -184,7 +184,7 @@ public class SQLiteDatabase: Database {
             var statement: OpaquePointer?
             try execute { sqlite3_prepare_v2(database,
                                              """
-                                             DELETE FROM utxos WHERE pubkey_hash == ?;
+                                             DELETE FROM utxos WHERE id == ?;
                                              """,
                                              -1,
                                              &statement,
@@ -381,9 +381,9 @@ public class SQLiteDatabase: Database {
         return balance
     }
 
-    public func deleteUTXO(pubkeyHash: Data) throws -> Bool {
+    public func deleteUTXO(hash: Data) throws -> Bool {
         let statement = statements["deleteUTXO"]
-        try execute { pubkeyHash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(pubkeyHash.count), SQLITE_TRANSIENT) } }
+        try execute { hash.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0, Int32(hash.count), SQLITE_TRANSIENT) } }
         let hasDeleted = sqlite3_step(statement) == SQLITE_ROW
         try execute { sqlite3_reset(statement) }
         return hasDeleted

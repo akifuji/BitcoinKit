@@ -53,7 +53,7 @@ class WalletViewController: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
     @IBAction func didTapSendButton(_ sender: UIButton) {
-        wallet.peerManager.send(toAddress: "mjPAZNeeSid5F9BKt6hYKgfRWrADDtgCVp", amount: 5000, changeAddress: wallet.changePublicKey.base58Address)
+        wallet.peerManager.send(toAddress: "mjPAZNeeSid5F9BKt6hYKgfRWrADDtgCVp", amount: 5000, changeAddress: wallet.changePublicKey.base58Address, allKeys: wallet.allKeys)
     }
     
     private func updateBalance() {
