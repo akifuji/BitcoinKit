@@ -8,7 +8,7 @@
 
 import Foundation
 
-struct BIP44Keychain {
+public struct BIP44Keychain {
     private let masterKey: ExtendedPrivatekey
     private let network: Network
     private var purpose: UInt32 {
@@ -24,11 +24,11 @@ struct BIP44Keychain {
         case `internal`, external
     }
 
-    init(seed: Data, network: Network) {
+    public init(seed: Data, network: Network) {
         self.init(masterKey: ExtendedPrivatekey(seed: seed, network: network), network: network)
     }
 
-    init(mnemonic: [String], passphrase: String, network: Network) {
+    public init(mnemonic: [String], passphrase: String, network: Network) {
         let seed = Mnemonic.seed(mnemonic: mnemonic, passphrase: passphrase)
         self.init(seed: seed, network: network)
     }
@@ -38,15 +38,16 @@ struct BIP44Keychain {
         self.network = network
     }
 
-    func receiveKey(index: UInt32) -> PrivateKey {
+    public func receiveKey(index: UInt32) -> PrivateKey {
         do {
             return try derivedKey(path: "m/\(purpose)'/\(coinType)'/\(account)'/\(Change.internal.rawValue)/\(index)").privateKey
-        } catch {
+        } catch let error {
+            print(error)
             fatalError("Cannot initiate receivePrivateKey")
         }
     }
 
-    func changeKey(index: UInt32) -> PrivateKey {
+    public func changeKey(index: UInt32) -> PrivateKey {
         do {
             return try derivedKey(path: "m/\(purpose)'/\(coinType)'/\(account)'/\(Change.external.rawValue)/\(index)").privateKey
         } catch {
@@ -54,7 +55,7 @@ struct BIP44Keychain {
         }
     }
 
-    func keys(receiveIndexRange: Range<UInt32>, changeIndexRange: Range<UInt32>) -> [PrivateKey] {
+    public func keys(receiveIndexRange: Range<UInt32>, changeIndexRange: Range<UInt32>) -> [PrivateKey] {
         let receiveKeys: [PrivateKey] = receiveIndexRange.map { receiveKey(index: $0) }
         let changeKeys: [PrivateKey] = changeIndexRange.map { changeKey(index: $0) }
         return receiveKeys + changeKeys
@@ -80,13 +81,13 @@ struct BIP44Keychain {
     /// "m/b/c" (alphabetical characters instead of numerical indexes)
     /// "m/1.2^3" (contains illegal characters)
     private func derivedKey(path: String) throws -> ExtendedPrivatekey {
-        var key: ExtendedPrivatekey = masterKey
-        var path: String = path
-        if path == "" || path == "/" || path == "m" {
+        var key = masterKey
+        var path = path
+        if path == "m" || path == "/" || path == "" {
             return key
         }
         if path.contains("m/") {
-            path = String(path.dropLast(2))
+            path = String(path.dropFirst(2))
         }
         for chunk in path.split(separator: "/") {
             var hardened = false
@@ -96,7 +97,7 @@ struct BIP44Keychain {
                 indexText = indexText.dropLast()
             }
             guard let index = UInt32(indexText) else {
-                throw DerivationError.error("invalid path")
+                fatalError("invalid path")
             }
             key = try key.derived(at: index, hardened: hardened)
         }
